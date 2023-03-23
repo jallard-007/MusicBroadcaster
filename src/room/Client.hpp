@@ -32,46 +32,35 @@ namespace room {
     */
     BaseSocket socket;
 
-    /**
-     * thread associated with this client
-    */
-    std::thread thread;
-
   public:
     Client();
 
     /**
      * Constructor which takes the name of the client along with the socket associated with the client
      * \param name name of client
-     * \param socketFD file descriptor of socket associated with this client
+     * \param socket socket associated with this client
     */
-    Client(const std::string &name, int socketFD);
+    Client(const std::string &name, BaseSocket &&socket);
 
     /**
      * Move constructor
     */
     Client(Client &&moved);
 
+    /**
+     * Delete the copy constructor. This is because BaseSocket closes the file descriptor in its destructor so we cannot copy
+    */
+    Client(const Client &) = delete;
+
+    /**
+     * the equality operator
+    */
+    bool operator==(const room::Client &rhs) const;
 
     /**
      * Getter for name field
     */
     const std::string &getName() const;
-
-    /**
-     * Getter for thread pointer
-    */
-    const std::thread &getThread() const;
-
-    /**
-     * Setter for thread pointer
-    */
-    void setThread(std::thread &&movedThread);
-
-    /**
-     * waits for the thread to finish execution
-    */
-    void waitForThread();
 
     /**
      * Getter for socket

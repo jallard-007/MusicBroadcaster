@@ -12,8 +12,8 @@
 Client::Client(const std::string &name):
   id{}, clientName{name}, clientSocket{} {}
 
-Client::Client(const std::string &name, const BaseSocket &socket):
-  id{}, clientName{name}, clientSocket{socket} {}
+Client::Client(const std::string &name, BaseSocket &&socket):
+  id{}, clientName{name}, clientSocket{std::move(socket)} {}
 
 const std::string &Client::getName() const  {
   return clientName;

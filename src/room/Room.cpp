@@ -20,25 +20,70 @@
 using namespace Commands;
 
 Room::Room() {
-
   const uint16_t port = getPort();
   std::string host;
   getHost(host);
   hostSocket.bind(host, port);
   hostSocket.listen();
 
-  // ask for room name on command line here to register with tracker
+  // set initial max file descriptor for selector
+  fdMax = hostSocket.getSocketFD();
 
-  // launch accept thread, this will accept incoming connections
-  // each connection will also launch a thread to listen to that client
-  acceptThread = std::thread(&Room::_handleConnectionRequests, this);
+  FD_ZERO(&master);    // clear the master sets
+  // add stdin and the hostSocket to selector list
+  FD_SET(0, &master);
+  FD_SET(hostSocket, &master);
 
-  // we could do other things here such as sending file to clients
-  // use signalling to tell main thread what to do
+  manageRoom();
+} 
 
-  // wait on accept thread
-  if (acceptThread.joinable()) {
-    acceptThread.join();
+void Room::manageRoom() {
+  while (1) {
+    fd_set read_fds = master;  // temp file descriptor list for select()
+    if (::select(fdMax + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
+      fprintf(stderr, "select: %s (%d)\n", strerror(errno), errno);
+      exit(1);
+    }
+
+    if (FD_ISSET(hostSocket, &read_fds)) { // connection request, add them to the room
+      _handleConnectionRequests();
+    }
+    if (FD_ISSET(0, &read_fds)) { // input from stdin, local user entered a command
+      // handle command line input here
+      std::string input;
+      std::getline(std::cin, input);
+      if (input == "exit") {
+        return;
+      }
+    }
+
+    // loop through all clients to see if they sent something
+    std::list<room::Client>::iterator client = clients.begin();
+    while (client != clients.end()) {
+      if (FD_ISSET(client->getSocket(), &read_fds)) { // check if file descriptor is set, if it is, that means theres something to read
+        // request from a client
+        std::byte requestHeader[6];
+        size_t numBytesRead = 0;
+        // if for some reason the call to `read` gets less than 6 bytes, this loop is here to insure we read all 6
+        while (numBytesRead < 6) {
+          numBytesRead += client->getSocket().read(requestHeader + numBytesRead, sizeof requestHeader - numBytesRead);
+          if (numBytesRead == 0) {
+            // connection was closed, remove the client.
+            std::cout << "A client disconnected\n";
+            FD_CLR(client->getSocket(), &master);
+            client = clients.erase(client);
+            break;
+          } else if (numBytesRead == 6){
+            _handleClientRequest(*client, requestHeader);
+            ++client;
+            break;
+          }
+        }
+      } else { // nothing from this client
+        // increment to next client
+        ++client;
+      }
+    }
   }
 }
 
@@ -55,8 +100,6 @@ void Room::printClients() {
 
 room::Client &Room::addClient(room::Client &&newClient) {
   room::Client &client = clients.emplace_back(std::move(newClient));
-  // launch client thread to listen for messages
-  client.setThread(std::thread(&Room::_handleClientSocket, this, &client));
   return client;
 }
 
@@ -89,61 +132,40 @@ const std::list<room::Client> &Room::getClients() const {
  * The below functions deal with handling requests from connected clients
 */
 
-void *Room::_handleConnectionRequests() {
-  std::cout << "Listening for connection requests...\n";
-  // use atomic bool here to signal stop
-  while (1) {
-    // accept connection and add client to room's client list
-    const int socketFD = hostSocket.accept();
-    std::cout << "Client connected\n";
-    this->addClient({"user", socketFD});
+void Room::_handleConnectionRequests() {
+  BaseSocket clientSocket = hostSocket.accept();
+  if (clientSocket == -1) {
+    // error accepting connection, skip
+    return;
   }
+  if (clientSocket >= fdMax) {
+    // new fileDescriptor is greater than previous greatest, update it
+    fdMax = clientSocket;
+  }
+  std::cout << "Client connected\n";
+  // finally, add the client to both the selector list and the room list
+  FD_SET(clientSocket, &master);
+  this->addClient({"user", std::move(clientSocket)});
 }
 
-void *Room::_handleClientSocket(void *arg) {
-  // cast argument into a room::Client object
-  room::Client &client = *(static_cast<room::Client *>(arg));
-
-  do {
-    // read in bytes corresponding to size of the header, see Message class
-    std::byte requestHeader[6];
-    const size_t numBytesRead = client.getSocket().read(requestHeader, sizeof requestHeader);
-    if (numBytesRead == 0) {
-      // connection was probably closed.
-      std::cout << "Client disconnected\n";
-      return nullptr;
-    }
-
-    // convert header to message
-    Message message(requestHeader);
-
-    // handle every supported message here
-    Command command = static_cast<Command>(message.getCommand());
-    switch(command) {
-      case Command::REQ_ADD_TO_QUEUE:
-        _attemptAddSongToQueue(client, message.getBodySize());
-        break;
-      default:
-        _sendBasicResponse(client.getSocket(), Command::BAD_VALUES);
-        break;
-    }
-  } while (1); // NOTE: should use an atomic bool here to communicate between threads
-  return nullptr;
+void Room::_handleClientRequest(room::Client &client, const std::byte *requestHeader) {
+  // convert header to message
+  Message message(requestHeader);
+  // handle every supported message here
+  Command command = static_cast<Command>(message.getCommand());
+  switch(command) {
+    case Command::REQ_ADD_TO_QUEUE:
+      _attemptAddSongToQueue(client, message.getBodySize());
+      break;
+    default:
+      _sendBasicResponse(client.getSocket(), Command::BAD_VALUES);
+      break;
+  }
 }
 
 void Room::_attemptAddSongToQueue(room::Client& client, const size_t sizeOfFile) {
   // atomic bool here again
   while (1) {
-    if (!queueMutex.try_lock()) {
-      // we could not lock, try again later
-
-      // how long to wait till we try to acquire lock again
-      static const std::chrono::milliseconds interval(100);
-      std::this_thread::sleep_for(interval);
-      continue; // loop back
-    }
-    // we locked successfully
-
     BaseSocket &socket = client.getSocket();
 
     // add a Music object into the queue
@@ -153,7 +175,6 @@ void Room::_attemptAddSongToQueue(room::Client& client, const size_t sizeOfFile)
       // adding to queue was unsuccessful, we can release the lock right away
       // send a message back to client to deny their request to add a song
       _sendBasicResponse(socket, Command::RES_NOT_OK);
-      queueMutex.unlock(); // release lock
       break;
     }
     // adding to the queue was successful
@@ -190,9 +211,6 @@ void Room::_attemptAddSongToQueue(room::Client& client, const size_t sizeOfFile)
       // loop until we have the whole file
     } while (totalNumBytesRead < sizeOfFile);
 
-    // we have read the whole file, can release the lock
-    // NOTE: we could release the lock just after we allocate memory and then use a lock on the Music object instead
-    queueMutex.unlock(); // release lock
     break;
   }
 }

@@ -23,10 +23,12 @@ BaseSocket::~BaseSocket() {
   }
 }
 
-BaseSocket::BaseSocket(const BaseSocket &copied): socketFD{copied.socketFD} {}
-
 BaseSocket::BaseSocket(BaseSocket &&moved): socketFD{moved.socketFD} {
   moved.socketFD = 0;
+}
+
+BaseSocket::operator int() {
+  return socketFD;
 }
 
 void BaseSocket::setSocketFD(int newFD) {
@@ -122,15 +124,14 @@ void BaseSocket::listen(int backlog) {
   }
 }
 
-int BaseSocket::accept() {
+BaseSocket BaseSocket::accept() {
   struct sockaddr serverAddr; // not used at the moment
   socklen_t sockLen = sizeof (serverAddr);
   const int clientFD = ::accept(socketFD, &serverAddr, &sockLen); 
   if (clientFD == -1) {
     fprintf(stderr, "accept: %s (%d)\n", strerror(errno), errno);
-    exit(1);
   }
-  return clientFD;
+  return BaseSocket(clientFD);
 }
 
 int BaseSocket::getSocketFD() const {
