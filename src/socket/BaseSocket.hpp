@@ -30,12 +30,12 @@ public:
   BaseSocket(int socketFD);
 
   /**
-   * Copy constructor. deleted since the destructor closes the socket, use std::move to assign instead
+   * Copy constructor
    */
-  BaseSocket(const BaseSocket &) = delete;
+  BaseSocket(const BaseSocket &);
 
   /**
-   * Move constructor. sets original object's file descriptor to 0 so that it does not close the original socket
+   * Move constructor
    */
   BaseSocket(BaseSocket &&);
 
@@ -43,8 +43,6 @@ public:
    * Destructor. Closes the socket
   */
   ~BaseSocket();
-
-  operator int();
 
   /**
    * Getter for socketFD
@@ -80,9 +78,9 @@ public:
 
   /**
    * Accepts connection requests. This is blocking, current thread will wait til a request comes through
-   * \returns BaseSocket object with the new file descriptor
+   * \returns file descriptor of socket
   */
-  BaseSocket accept();
+  int accept();
 
   /**
    * Write raw data to socketFD

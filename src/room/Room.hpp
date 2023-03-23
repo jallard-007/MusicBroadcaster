@@ -24,11 +24,6 @@ private:
   int ip;
 
   /**
-   * keep track of the biggest file descriptor for select
-  */
-  int fdMax;
-
-  /**
    * Socket in which connections are established
   */
   BaseSocket hostSocket;
@@ -37,6 +32,16 @@ private:
    * name of the room, also not being used
   */
   std::string name;
+
+  /**
+   * mutex for queue
+  */
+  std::mutex queueMutex;
+
+  /**
+   * Continuously looks for incoming connections
+  */
+  std::thread acceptThread;
 
   /**
    * list of clients which have connected to the room
@@ -49,20 +54,16 @@ private:
   MusicStorage queue;
 
   /**
-   * master file descriptor list
-  */
-  fd_set master;
-
-  /**
    * Handles connection requests
   */
-  void _handleConnectionRequests();
+  void *_handleConnectionRequests();
 
   /**
    * Handles incoming messages from the client.
-   * \param client reference to client object
+   * This is where the meat and potatoes of the work is done / managed
+   * \param arg pointer to client object
   */
-  void _handleClientRequest(room::Client& client, const std::byte *requestHeader);
+  void *_handleClientSocket(void *arg);
 
   /**
    * Attempts to add a song to the queue
@@ -86,11 +87,6 @@ public:
   Room();
 
   ~Room() = default;
-
-  /**
-   * manages the room
-  */
-  void manageRoom();
 
   /**
    * set ip

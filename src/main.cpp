@@ -36,7 +36,7 @@ void handleClient() {
   if (!clientSocket.connect(host, port)) {
     return;
   }
-  Client client("", std::move(clientSocket));
+  Client client("", clientSocket);
   client.sendMusicFile();
 }
 

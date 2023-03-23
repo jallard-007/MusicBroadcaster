@@ -29,7 +29,7 @@ public:
    * \param name name of client
    * \param socket socket associated with this client
   */
-  Client(const std::string &name, BaseSocket &&socket);
+  Client(const std::string &name, const BaseSocket &socket);
 
   /**
    * Asks for the path to the file.
