@@ -1,5 +1,5 @@
 /**
- * \author Justin Nicolas Allard
+ * @author Justin Nicolas Allard
  * Header file for player class
 */
 
@@ -58,14 +58,14 @@ public:
 
   /**
    * feed audio data to mpg123
-   * \param food pointer to audio data
-   * \param foodSize size of audio data
+   * @param food pointer to audio data
+   * @param foodSize size of audio data
   */
   void feed(unsigned char *food, size_t foodSize);
 
   /**
    * feed audio data to mpg123
-   * \param music pointer to music object
+   * @param music pointer to music object
   */
   void feed(Music *music);
 

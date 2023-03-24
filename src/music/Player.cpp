@@ -1,5 +1,5 @@
 /**
- * \author Justin Nicolas Allard
+ * @author Justin Nicolas Allard
  * Implementation file for player class
 */
 

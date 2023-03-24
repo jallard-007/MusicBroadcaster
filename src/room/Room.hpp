@@ -1,5 +1,5 @@
 /**
- * \author Justin Nicolas Allard
+ * @author Justin Nicolas Allard
  * Header file for room class
 */
 
@@ -9,7 +9,7 @@
 #include <string>
 #include <list>
 #include <mutex>
-#include <thread>
+#include <sys/select.h>
 #include "Client.hpp"
 #include "../socket/BaseSocket.hpp"
 #include "../music/MusicStorage.hpp"
@@ -24,14 +24,20 @@ private:
   int ip;
 
   /**
+   * keep track of the biggest file descriptor for select
+  */
+  int fdMax;
+
+  /**
    * Socket in which connections are established
   */
   BaseSocket hostSocket;
 
   /**
-   * name of the room, also not being used
+   * Pipe to communicate from child threads to parent thread.
+   * This is used to allow child threads to notify when they have completed with select
   */
-  std::string name;
+  int threadPipe[2];
 
   /**
    * mutex for queue
@@ -39,9 +45,9 @@ private:
   std::mutex queueMutex;
 
   /**
-   * Continuously looks for incoming connections
+   * name of the room, also not being used
   */
-  std::thread acceptThread;
+  std::string name;
 
   /**
    * list of clients which have connected to the room
@@ -54,28 +60,31 @@ private:
   MusicStorage queue;
 
   /**
+   * master file descriptor list
+  */
+  fd_set master;
+
+  /**
    * Handles connection requests
   */
-  void *_handleConnectionRequests();
+  void _handleConnectionRequests();
 
   /**
    * Handles incoming messages from the client.
-   * This is where the meat and potatoes of the work is done / managed
-   * \param arg pointer to client object
+   * @param client reference to client object
   */
-  void *_handleClientSocket(void *arg);
+  void _handleClientRequest(room::Client& client, const std::byte *requestHeader);
 
   /**
    * Attempts to add a song to the queue
-   * \param client the client object to communicate with
-   * \param sizeOfFile the size of the audio file
+   * @param arg the client object to communicate with
   */
-  void _attemptAddSongToQueue(room::Client& client, size_t sizeOfFile);
+  void *_attemptAddSongToQueue(void *arg);
 
   /**
    * Sends a header only response to the client
-   * \param socket socket to send to
-   * \param responseCommand one of the responses define in Commands.hpp
+   * @param socket socket to send to
+   * @param responseCommand one of the responses define in Commands.hpp
   */
   void _sendBasicResponse(BaseSocket& socket, Commands::Command responseCommand);
 
@@ -86,11 +95,23 @@ public:
   */
   Room();
 
-  ~Room() = default;
+  ~Room();
+
+  /**
+   * Initializes the room, preparing it to launch
+   * @returns false on error, true on success
+  */
+  bool initializeRoom();
+
+  /**
+   * launch the room. Accepts incoming connections and manages the room
+   * @returns false on error, true if exited cleanly (user entered exit)
+  */
+  bool launchRoom();
 
   /**
    * set ip
-   * \param newIp new ip number
+   * @param newIp new ip number
   */
   void setIp(int newIp);
 
@@ -101,8 +122,8 @@ public:
 
   /**
    * add a client
-   * \param client client object to add
-   * \returns reference to client which was added
+   * @param client client object to add
+   * @returns reference to client which was added
   */
   room::Client &addClient(room::Client &&client);
 

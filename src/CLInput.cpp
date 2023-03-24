@@ -17,7 +17,7 @@ uint16_t getPort() {
 }
 
 void getHost(std::string &input) {
-  while (1) { // loop until valid number
+  while (1) { // loop until some input
     std::cout << "Enter a host\n >> ";
     std::getline(std::cin, input);
     if (input != "") {

@@ -1,5 +1,5 @@
 /**
- * \author Justin Nicolas Allard
+ * @author Justin Nicolas Allard
  * Implementation file for music storage class
 */
 
@@ -20,6 +20,11 @@ void MusicStorage::removeByPath(const std::string &musicPath) {
 void MusicStorage::removeByName(const std::string &musicName) {
   songs.remove_if([musicName](Music &song){
     return song.getName() == musicName;
+  });
+}
+void MusicStorage::removeByAddress(Music *musicAddress) {
+  songs.remove_if([musicAddress](Music &song){
+    return &song == musicAddress;
   });
 }
 

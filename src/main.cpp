@@ -1,5 +1,5 @@
 /**
- * \author Justin Nicolas Allard
+ * @author Justin Nicolas Allard
  * Start of execution, main function
 */
 
@@ -36,7 +36,7 @@ void handleClient() {
   if (!clientSocket.connect(host, port)) {
     return;
   }
-  Client client("", clientSocket);
+  Client client("", std::move(clientSocket));
   client.sendMusicFile();
 }
 
@@ -91,6 +91,9 @@ int main() {
       case Command::MAKE_ROOM: {
         // "make room" command was entered, so now we treat this user as a client who wants to make a room
         Room room;
+        if (room.initializeRoom()) {
+          room.launchRoom();
+        }
         break;
       }
 

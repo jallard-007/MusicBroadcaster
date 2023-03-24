@@ -1,5 +1,5 @@
 /**
- * \author Justin Nicolas Allard
+ * @author Justin Nicolas Allard
  * Header file for client class
 */
 
@@ -20,16 +20,16 @@ public:
 
   /**
    * Constructor
-   * \param name name of client
+   * @param name name of client
   */
   Client(const std::string &name);
 
   /**
    * Constructor
-   * \param name name of client
-   * \param socket socket associated with this client
+   * @param name name of client
+   * @param socket socket associated with this client
   */
-  Client(const std::string &name, const BaseSocket &socket);
+  Client(const std::string &name, BaseSocket &&socket);
 
   /**
    * Asks for the path to the file.

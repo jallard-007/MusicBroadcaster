@@ -1,5 +1,5 @@
 /**
- * \author Justin Nicolas Allard
+ * @author Justin Nicolas Allard
  * Header file for music storage class
 */
 
@@ -7,7 +7,6 @@
 #define MUSIC_STORAGE_H
 
 #include <list>
-#include <atomic>
 #include "Music.hpp"
 
 #define MAX_SONGS 10
@@ -31,27 +30,32 @@ public:
   void removeByName(const std::string &);
 
   /**
+   * Removes a music object by its address in memory
+  */
+  void removeByAddress(Music *);
+
+  /**
    * Add an unnamed Music object to the back of the list
-   * \return pointer to the new Music object, nullptr if no room
+   * @returns pointer to the new Music object, nullptr if no room
   */
   Music *add();
 
   /**
    * Adds a Music object to the list
-   * \param musicName name of music
-   * \return pointer to the new Music object, nullptr if no room
+   * @param musicName name of music
+   * @returns pointer to the new Music object, nullptr if no room
    */
   Music *addByName(const std::string &);
 
   /**
    * Gets a music object by its path property
-   * \return pointer to object, nullptr if the object is not in the list
+   * @returns pointer to object, nullptr if the object is not in the list
    */
   [[nodiscard]] Music *getByPath(const std::string &);
 
   /**
    * Gets a music object by its name property
-   * \return pointer to object, nullptr if the object is not in the list
+   * @returns pointer to object, nullptr if the object is not in the list
   */
   [[nodiscard]] Music *getByName(const std::string &);
 

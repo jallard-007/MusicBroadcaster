@@ -1,5 +1,5 @@
 /**
- * \author Justin Nicolas Allard
+ * @author Justin Nicolas Allard
  * Header file for music class
 */
 
@@ -34,7 +34,7 @@ public:
 
   /**
    * Attemps to read the file at Music::path and store the contents in Music::bytes
-   * \returns true on success, false otherwise
+   * @returns true on success, false otherwise
   */
   bool readFileAtPath();
 
