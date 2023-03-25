@@ -4,6 +4,7 @@
 */
 
 #include <iostream>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 
@@ -57,7 +58,11 @@ void handleClient() {
 
     if (FD_ISSET(clientSocket.getSocketFD(), &read_fds)) {
       std::byte responseHeader[6];
-      client.getSocket().readAll(responseHeader, 6);
+      if (client.getSocket().readAll(responseHeader, 6) == 0){
+        p.pause();
+        std::cout << "lost connection to room\n";
+        return;
+      }
       Message mes(responseHeader);
       Commands::Command command = static_cast<Commands::Command>(mes.getCommand());
       const unsigned int size = mes.getBodySize();
@@ -65,7 +70,11 @@ void handleClient() {
         case Commands::Command::SONG_DATA: {
           Music m;
           m.getBytes().resize(size);
-          client.getSocket().readAll(m.getBytes().data(), size);
+          if (client.getSocket().readAll(m.getBytes().data(), size) == 0) {
+            p.pause();
+            std::cout << "lost connection to room\n";
+            return;
+          };
           p.feed(&m);
           p.play();
           break;
