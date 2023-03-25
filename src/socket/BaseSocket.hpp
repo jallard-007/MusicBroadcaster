@@ -74,13 +74,13 @@ public:
   /**
    * Call after BaseSocket::bind() to allow incoming requests to connect
   */
-  bool listen(int backlog = 20);
+  bool listen(int backlog = 20) const;
 
   /**
    * Accepts connection requests. This is blocking, current thread will wait til a request comes through
    * @returns BaseSocket object with the new file descriptor
   */
-  BaseSocket accept();
+  BaseSocket accept() const;
 
   /**
    * Write raw data to socketFD
@@ -96,7 +96,7 @@ public:
    * @param bufferSize size of buffer
    * @returns number of bytes read or 0 if socket closed by peer
   */
-  size_t read(std::byte *buffer, size_t bufferSize);
+  size_t read(std::byte *buffer, size_t bufferSize) const;
 
   /**
    * Reads raw data from socketFD. Will ensure all bytes are read.
@@ -105,7 +105,7 @@ public:
    * @param bufferSize size of buffer
    * @returns bufferSize or 0 if the socket was closed by peer
   */
-  size_t readAll(std::byte *buffer, size_t bufferSize);
+  size_t readAll(std::byte *buffer, size_t bufferSize) const;
 };
 
 #endif

@@ -4,12 +4,12 @@
 */
 
 #include <thread>
-#include "../socket/BaseSocket.hpp"
+#include "../socket/ThreadSafeSocket.hpp"
 #include "Client.hpp"
 
 room::Client::Client(): name{}, socket{} {}
 
-room::Client::Client(const std::string &name, BaseSocket &&socket):
+room::Client::Client(const std::string &name, ThreadSafeSocket &&socket):
   name{name}, socket{std::move(socket)} {}
 
 room::Client::Client(Client &&moved):
@@ -23,6 +23,6 @@ const std::string &room::Client::getName() const {
   return name;
 }
 
-BaseSocket &room::Client::getSocket() {
+ThreadSafeSocket &room::Client::getSocket() {
   return socket;
 }

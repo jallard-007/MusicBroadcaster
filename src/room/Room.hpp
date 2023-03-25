@@ -12,6 +12,7 @@
 #include <sys/select.h>
 #include "Client.hpp"
 #include "../socket/BaseSocket.hpp"
+#include "../socket/ThreadSafeSocket.hpp"
 #include "../music/MusicStorage.hpp"
 #include "../messaging/Commands.hpp"
 
@@ -42,7 +43,7 @@ private:
   /**
    * mutex for queue
   */
-  std::mutex queueMutex;
+  mutable std::mutex queueMutex;
 
   /**
    * name of the room, also not being used
@@ -67,26 +68,31 @@ private:
   /**
    * Handles connection requests
   */
-  void _handleConnectionRequests();
+  void handleConnectionRequests();
 
   /**
    * Handles incoming messages from the client.
    * @param client reference to client object
   */
-  void _handleClientRequest(room::Client& client, const std::byte *requestHeader);
+  void handleClientRequest(room::Client& client, const std::byte *requestHeader);
+
+  /**
+   * Attempts to send the next song to all clients client
+  */
+  void sendSongData();
 
   /**
    * Attempts to add a song to the queue
    * @param arg the client object to communicate with
   */
-  void *_attemptAddSongToQueue(void *arg);
+  void *attemptAddSongToQueue(void *arg);
 
   /**
    * Sends a header only response to the client
    * @param socket socket to send to
    * @param responseCommand one of the responses define in Commands.hpp
   */
-  void _sendBasicResponse(BaseSocket& socket, Commands::Command responseCommand);
+  void sendBasicResponse(ThreadSafeSocket& socket, Commands::Command responseCommand);
 
 public:
 

@@ -31,6 +31,11 @@ const BaseSocket &Client::getSocket() const {
   return clientSocket;
 }
 
+void Client::setSocket(BaseSocket &&socket) {
+  clientSocket.setSocketFD(socket.getSocketFD());
+  socket.setSocketFD(0);
+}
+
 void Client::sendMusicFile() {
   if (clientSocket.getSocketFD() == 0) {
     std::cerr << "socket file descriptor not set\n";

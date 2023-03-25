@@ -7,7 +7,7 @@
 #define CLIENT_ENTRY_H
 
 #include <thread>
-#include "../socket/BaseSocket.hpp"
+#include "../socket/ThreadSafeSocket.hpp"
 
 /**
  * Namespace used to differentiate room (server side) client from client side client class
@@ -30,7 +30,7 @@ namespace room {
     /**
      * socket associated with the client
     */
-    BaseSocket socket;
+    ThreadSafeSocket socket;
 
   public:
     Client();
@@ -40,7 +40,7 @@ namespace room {
      * @param name name of client
      * @param socket socket associated with this client
     */
-    Client(const std::string &name, BaseSocket &&socket);
+    Client(const std::string &name, ThreadSafeSocket &&socket);
 
     /**
      * Move constructor
@@ -65,7 +65,7 @@ namespace room {
     /**
      * Getter for socket
     */
-    BaseSocket &getSocket();
+    ThreadSafeSocket &getSocket();
   };
 
 }

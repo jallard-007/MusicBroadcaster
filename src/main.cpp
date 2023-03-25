@@ -12,6 +12,7 @@
 #include "./room/Client.hpp"
 #include "./room/Room.hpp"
 #include "./client/Client.hpp"
+#include "./music/Player.hpp"
 
 /**
  * show help information
@@ -31,12 +32,61 @@ void handleClient() {
   const uint16_t port = getPort();
   std::string host;
   getHost(host);
-  BaseSocket clientSocket;
-  if (!clientSocket.connect(host, port)) {
-    return;
+  Client client;
+  {
+    BaseSocket clientSocket;
+    if (!clientSocket.connect(host, port)) {
+      return;
+    }
+    client.setSocket(std::move(clientSocket));
   }
-  Client client("", std::move(clientSocket));
-  client.sendMusicFile();
+
+  const BaseSocket &clientSocket = client.getSocket();
+  const int fdMax = clientSocket.getSocketFD();
+  fd_set master;
+  FD_ZERO(&master);
+  FD_SET(0, &master);
+  FD_SET(clientSocket.getSocketFD(), &master);
+  Player p;
+  while (1) {
+    fd_set read_fds = master;  // temp file descriptor list for select()
+    if (::select(fdMax + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
+      fprintf(stderr, "select: %s (%d)\n", strerror(errno), errno);
+      return;
+    }
+
+    if (FD_ISSET(clientSocket.getSocketFD(), &read_fds)) {
+      std::byte responseHeader[6];
+      client.getSocket().readAll(responseHeader, 6);
+      Message mes(responseHeader);
+      Commands::Command command = static_cast<Commands::Command>(mes.getCommand());
+      const unsigned int size = mes.getBodySize();
+      switch (command) {
+        case Commands::Command::SONG_DATA: {
+          Music m;
+          m.getBytes().resize(size);
+          client.getSocket().readAll(m.getBytes().data(), size);
+          p.feed(&m);
+          p.play();
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    // input from stdin, local user entered a command
+    if (FD_ISSET(0, &read_fds)) { 
+      // handle command line input here
+      std::string input;
+      std::getline(std::cin, input);
+      if (input == "exit") {
+        return;
+      } else if (input == "send song") {
+        client.sendMusicFile();
+      }
+    }
+  }
 }
 
 /**
@@ -47,6 +97,7 @@ enum class Command {
   MAKE_ROOM,
   JOIN_ROOM,
   HELP,
+  EXIT
 };
 
 /**
@@ -58,6 +109,7 @@ static const std::unordered_map<std::string, Command> commandMap = {
   {"make room", Command::MAKE_ROOM},
   {"join room", Command::JOIN_ROOM},
   {"help", Command::HELP},
+  {"exit", Command::EXIT}
 };
 
 int main() {
@@ -75,6 +127,9 @@ int main() {
 
     // handle all possible commands in this switch
     switch (command) {
+
+      case Command::EXIT:
+        return 0;
 
       case Command::HELP: 
         // show help information, such as list of commands, how to use the application...

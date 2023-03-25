@@ -70,7 +70,7 @@ bool BaseSocket::write(const std::byte *data, const size_t dataSize) const {
   return true;
 }
 
-size_t BaseSocket::read(std::byte *buffer, const size_t bufferSize) {
+size_t BaseSocket::read(std::byte *buffer, const size_t bufferSize) const {
   const ssize_t numReadBytes = recv(socketFD, buffer, bufferSize, 0);
   if (numReadBytes == -1) {
     fprintf(stderr, "recv: %s (%d)\n", strerror(errno), errno);
@@ -79,7 +79,7 @@ size_t BaseSocket::read(std::byte *buffer, const size_t bufferSize) {
   return static_cast<size_t>(numReadBytes);
 }
 
-size_t BaseSocket::readAll(std::byte *buffer, const size_t bufferSize) {
+size_t BaseSocket::readAll(std::byte *buffer, const size_t bufferSize) const {
   size_t totalBytesRead = 0;
   do {
     const ssize_t bytesRead = recv(socketFD, buffer + totalBytesRead, bufferSize - totalBytesRead, 0);
@@ -139,7 +139,7 @@ bool BaseSocket::bind(const std::string &host, const uint16_t port) {
   return true;
 }
 
-bool BaseSocket::listen(int backlog) {
+bool BaseSocket::listen(int backlog) const {
   /* Set a default value if the backlog is negative */
   if (backlog < 0)
     backlog = 20;
@@ -151,7 +151,7 @@ bool BaseSocket::listen(int backlog) {
   return true;
 }
 
-BaseSocket BaseSocket::accept() {
+BaseSocket BaseSocket::accept() const {
   struct sockaddr serverAddr; // not used at the moment
   socklen_t sockLen = sizeof (serverAddr);
   const int clientFD = ::accept(socketFD, &serverAddr, &sockLen); 

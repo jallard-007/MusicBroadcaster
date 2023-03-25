@@ -39,6 +39,7 @@ public:
 
   [[nodiscard]] const BaseSocket &getSocket() const;
   [[nodiscard]] const std::string &getName() const;
+  void setSocket(BaseSocket &&socket);
   void setName(std::string);
   int getId() const;
 };

@@ -5,7 +5,6 @@
 
 #include <iostream>
 #include <vector>
-#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <sys/select.h>
@@ -16,6 +15,7 @@
 #include "Client.hpp"
 #include "../CLInput.hpp"
 #include "../socket/BaseSocket.hpp"
+#include "../socket/ThreadSafeSocket.hpp"
 #include "../messaging/Message.hpp"
 #include "../messaging/Commands.hpp"
 
@@ -23,8 +23,7 @@ using namespace Commands;
 
 Room::Room(): ip{0}, fdMax{0}, hostSocket{0},
   threadPipe{0}, queueMutex{}, name{"unnamed"},
-  clients{}, queue{}, master{}
-  {}
+  clients{}, queue{}, master{} {}
 
 Room::~Room() {
   if (threadPipe[0] != 0) {
@@ -74,7 +73,7 @@ bool Room::launchRoom() {
 
     // connection request, add them to the room
     if (FD_ISSET(hostSocket.getSocketFD(), &read_fds)) { 
-      _handleConnectionRequests();
+      handleConnectionRequests();
     }
 
     // input from stdin, local user entered a command
@@ -109,10 +108,7 @@ bool Room::launchRoom() {
       } else { // other wise its all good, continue
         // add the client's socket FD back to select
         FD_SET(fdOfClientSocket, &master);
-        
-        // now, we can send the audio to all clients.
-        // or if a song is already playing, maybe do it later
-
+        sendSongData();
       }
     }
 
@@ -131,7 +127,7 @@ bool Room::launchRoom() {
           FD_CLR(client->getSocket().getSocketFD(), &master);
           client = clients.erase(client);
         } else {
-          _handleClientRequest(*client, requestHeader);
+          handleClientRequest(*client, requestHeader);
           ++client;
         }
       } else {
@@ -186,8 +182,8 @@ const std::list<room::Client> &Room::getClients() const {
  * The below functions deal with handling requests from connected clients
 */
 
-void Room::_handleConnectionRequests() {
-  BaseSocket clientSocket = hostSocket.accept();
+void Room::handleConnectionRequests() {
+  ThreadSafeSocket clientSocket{hostSocket.accept()};
   if (clientSocket.getSocketFD() == -1) {
     // error accepting connection, skip
     return;
@@ -202,7 +198,7 @@ void Room::_handleConnectionRequests() {
   this->addClient({"user", std::move(clientSocket)});
 }
 
-void Room::_handleClientRequest(room::Client &client, const std::byte *requestHeader) {
+void Room::handleClientRequest(room::Client &client, const std::byte *requestHeader) {
   // convert header to message
   Message message(requestHeader);
   // handle every supported message here
@@ -213,7 +209,7 @@ void Room::_handleClientRequest(room::Client &client, const std::byte *requestHe
       // we add it back once the thread is finished executing
       FD_CLR(client.getSocket().getSocketFD(), &master);
       std::thread clientThread = std::thread(
-        &Room::_attemptAddSongToQueue,
+        &Room::attemptAddSongToQueue,
         this,
         &client
       );
@@ -221,17 +217,30 @@ void Room::_handleClientRequest(room::Client &client, const std::byte *requestHe
       break;
     }
     default:
-      _sendBasicResponse(client.getSocket(), Command::BAD_VALUES);
+      sendBasicResponse(client.getSocket(), Command::BAD_VALUES);
       break;
   }
 }
 
-void *Room::_attemptAddSongToQueue(void *arg) {
+void Room::sendSongData() {
+  Music *next = queue.getFront();
+  if (next != nullptr) {
+    const std::vector<std::byte> &audio = next->getBytes();
+    for (room::Client &client : clients) {
+      Message message;
+      message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
+      message.setBodySize(static_cast<unsigned int>(audio.size()));
+      client.getSocket().writeHeaderAndData(message.format().data(), audio.data(), audio.size());
+    }
+  }
+}
+
+void *Room::attemptAddSongToQueue(void *arg) {
   room::Client &client = *(static_cast<room::Client *>(arg));
-  BaseSocket &socket = client.getSocket();
+  ThreadSafeSocket &socket = client.getSocket();
 
   // wait till we acquire the lock
-  std::unique_lock<std::mutex> lock(queueMutex);
+  std::unique_lock<std::mutex> lock{queueMutex};
 
   // add a Music object into the queue
   Music *queueEntry = queue.add();
@@ -239,7 +248,7 @@ void *Room::_attemptAddSongToQueue(void *arg) {
   if (queueEntry == nullptr) {
     // adding to queue was unsuccessful
     // send a message back to client to deny their request to add a song
-    _sendBasicResponse(socket, Command::RES_NOT_OK);
+    sendBasicResponse(socket, Command::RES_NOT_OK);
 
     // notify parent thread to add this socket back in select
     const int socketFD = socket.getSocketFD();
@@ -248,36 +257,48 @@ void *Room::_attemptAddSongToQueue(void *arg) {
   }
   // adding to the queue was successful
   // send a message back to client to confirm that they can continue to send the song
-  _sendBasicResponse(socket, Command::RES_OK);
-
-  // read in the header, create message object from it
-  std::byte requestHeader[6];
-  socket.readAll(requestHeader, sizeof requestHeader);
-  const Message message(requestHeader);
-
-  // get size of message from message object
-  const unsigned int sizeOfFile = message.getBodySize();
-
-  // allocate memory for the file
-  queueEntry->getBytes().resize(sizeOfFile); 
-
-  std::byte *dataPointer = queueEntry->getBytes().data();
-
+  sendBasicResponse(socket, Command::RES_OK);
   int socketFD = socket.getSocketFD();
-  // read from the socket
-  const unsigned int numBytesRead = static_cast<unsigned int>(socket.readAll(dataPointer, sizeOfFile));
-  if (numBytesRead <= 0) {
-    // either client disconnected half way through, or some other error. Scrap it
-    queue.removeByAddress(queueEntry);
-    // make FD negative to tell parent thread we need to remove the client
-    socketFD *= -1;
-  }
+  do {
+    // read in the header, create message object from it
+    std::byte requestHeader[6];
+    {
+      const unsigned int numBytesRead = static_cast<unsigned int>(socket.readAll(requestHeader,  sizeof requestHeader));
+      if (numBytesRead <= 0) {
+        // either client disconnected half way through, or some other error. Scrap it
+        queue.removeByAddress(queueEntry);
+        // make FD negative to tell parent thread we need to remove the client
+        socketFD *= -1;
+        break;
+      }
+    }
+    const Message message(requestHeader);
+
+    // get size of message from message object
+    const unsigned int sizeOfFile = message.getBodySize();
+
+    // allocate memory for the file
+    queueEntry->getBytes().resize(sizeOfFile); 
+
+    std::byte *dataPointer = queueEntry->getBytes().data();
+
+    // read from the socket
+    {
+      const unsigned int numBytesRead = static_cast<unsigned int>(socket.readAll(dataPointer, sizeOfFile));
+      if (numBytesRead <= 0) {
+        // either client disconnected half way through, or some other error. Scrap it
+        queue.removeByAddress(queueEntry);
+        // make FD negative to tell parent thread we need to remove the client
+        socketFD *= -1;
+      }
+    }
+  } while (false);
   // notify parent thread that this thread is done
   ::write(threadPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
   return nullptr;
 }
 
-void Room::_sendBasicResponse(BaseSocket& socket, Command response) {
+void Room::sendBasicResponse(ThreadSafeSocket& socket, Command response) {
   std::byte responseHeader[6];
   ::memset(responseHeader, 0, sizeof responseHeader);
   responseHeader[0] = static_cast<std::byte>(response);
