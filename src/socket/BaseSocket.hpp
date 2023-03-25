@@ -44,8 +44,6 @@ public:
   */
   ~BaseSocket();
 
-  operator int();
-
   /**
    * Getter for socketFD
   */

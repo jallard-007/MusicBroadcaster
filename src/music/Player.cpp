@@ -17,7 +17,7 @@ Player::Player(): driver{}, shouldPlay{false}, outBufferSize{0},
   ao_initialize();
   driver = ao_default_driver_id();
   mh = mpg123_new(NULL, NULL);
-  mpg123_param2(mh, MPG123_ADD_FLAGS, MPG123_IGNORE_STREAMLENGTH, 0); // removes warning message on 'Frankenstein'
+  mpg123_param(mh, MPG123_ADD_FLAGS, MPG123_IGNORE_STREAMLENGTH, 0); // removes warning message on 'Frankenstein'
   mpg123_open_feed(mh);
   outBufferSize = mpg123_outblock(mh);
   outBuffer = malloc(outBufferSize);

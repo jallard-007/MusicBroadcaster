@@ -2,9 +2,6 @@
 GXX=g++
 GXXFLAGS=-std=c++17 -Wall -Wpedantic -Wextra -Wconversion -Werror
 
-# uncomment the below line if compiling normally does not work
-#GXXFLAGS=-std=c++17 -L/opt/local/lib -I/opt/local/include -lpthread
-
 # Source and object directories
 SRC_DIR=./src
 OBJ_DIR=./obj

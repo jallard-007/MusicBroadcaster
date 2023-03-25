@@ -21,8 +21,8 @@ bool room::Client::operator==(const room::Client &rhs) const {
 
 const std::string &room::Client::getName() const {
   return name;
-};
+}
 
 BaseSocket &room::Client::getSocket() {
   return socket;
-};
+}

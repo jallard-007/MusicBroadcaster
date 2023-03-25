@@ -12,7 +12,6 @@
 #include "./room/Client.hpp"
 #include "./room/Room.hpp"
 #include "./client/Client.hpp"
-#include "./music/Player.hpp"
 
 /**
  * show help information

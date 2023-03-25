@@ -16,7 +16,6 @@
 #include "Client.hpp"
 #include "../CLInput.hpp"
 #include "../socket/BaseSocket.hpp"
-#include "../music/Player.hpp"
 #include "../messaging/Message.hpp"
 #include "../messaging/Commands.hpp"
 
@@ -60,7 +59,7 @@ bool Room::initializeRoom() {
   FD_ZERO(&master);
   // add stdin, the hostSocket, and the pipe to selector list
   FD_SET(0, &master);
-  FD_SET(hostSocket, &master);
+  FD_SET(hostSocket.getSocketFD(), &master);
   FD_SET(threadPipe[0], &master);
   return true;
 }
@@ -74,7 +73,7 @@ bool Room::launchRoom() {
     }
 
     // connection request, add them to the room
-    if (FD_ISSET(hostSocket, &read_fds)) { 
+    if (FD_ISSET(hostSocket.getSocketFD(), &read_fds)) { 
       _handleConnectionRequests();
     }
 
@@ -120,7 +119,7 @@ bool Room::launchRoom() {
     // loop through all clients to see if they sent something
     std::list<room::Client>::iterator client = clients.begin();
     while (client != clients.end()) {
-      if (FD_ISSET(client->getSocket(), &read_fds)) { // check if file descriptor is set, if it is, that means theres something to read
+      if (FD_ISSET(client->getSocket().getSocketFD(), &read_fds)) { // check if file descriptor is set, if it is, that means theres something to read
         // request from a client
         std::byte requestHeader[6];
         const size_t numBytesRead = client->getSocket().readAll(requestHeader, sizeof requestHeader);
@@ -129,13 +128,15 @@ bool Room::launchRoom() {
           
           // connection was closed, remove the client.
           // we have to remove it from both the master list and the clients list
-          FD_CLR(client->getSocket(), &master);
-          clients.erase(client);
+          FD_CLR(client->getSocket().getSocketFD(), &master);
+          client = clients.erase(client);
         } else {
           _handleClientRequest(*client, requestHeader);
+          ++client;
         }
+      } else {
+        ++client;
       }
-      ++client;
     }
   }
 }
@@ -187,17 +188,17 @@ const std::list<room::Client> &Room::getClients() const {
 
 void Room::_handleConnectionRequests() {
   BaseSocket clientSocket = hostSocket.accept();
-  if (clientSocket == -1) {
+  if (clientSocket.getSocketFD() == -1) {
     // error accepting connection, skip
     return;
   }
-  if (clientSocket >= fdMax) {
+  if (clientSocket.getSocketFD() >= fdMax) {
     // new fileDescriptor is greater than previous greatest, update it
-    fdMax = clientSocket;
+    fdMax = clientSocket.getSocketFD();
   }
   std::cout << "Client connected\n";
   // finally, add the client to both the selector list and the room list
-  FD_SET(clientSocket, &master);
+  FD_SET(clientSocket.getSocketFD(), &master);
   this->addClient({"user", std::move(clientSocket)});
 }
 
@@ -210,7 +211,7 @@ void Room::_handleClientRequest(room::Client &client, const std::byte *requestHe
     case Command::REQ_ADD_TO_QUEUE: {
       // remove the socket from the master list since we want only the child thread to read from it.
       // we add it back once the thread is finished executing
-      FD_CLR(client.getSocket(), &master);
+      FD_CLR(client.getSocket().getSocketFD(), &master);
       std::thread clientThread = std::thread(
         &Room::_attemptAddSongToQueue,
         this,

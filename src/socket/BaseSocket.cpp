@@ -27,10 +27,6 @@ BaseSocket::BaseSocket(BaseSocket &&moved): socketFD{moved.socketFD} {
   moved.socketFD = 0;
 }
 
-BaseSocket::operator int() {
-  return socketFD;
-}
-
 void BaseSocket::setSocketFD(int newFD) {
   socketFD = newFD;
 }
