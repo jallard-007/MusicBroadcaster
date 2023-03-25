@@ -22,15 +22,22 @@
 using namespace Commands;
 
 Room::Room(): ip{0}, fdMax{0}, hostSocket{0},
-  threadPipe{0}, queueMutex{}, name{"unnamed"},
+  threadRecvPipe{0}, threadSendPipe{0},
+  queueMutex{}, name{"unnamed"},
   clients{}, queue{}, master{} {}
 
 Room::~Room() {
-  if (threadPipe[0] != 0) {
-    close(threadPipe[0]);
+  if (threadRecvPipe[0] != 0) {
+    close(threadRecvPipe[0]);
   }
-  if (threadPipe[1] != 0) {
-    close(threadPipe[1]);
+  if (threadRecvPipe[1] != 0) {
+    close(threadRecvPipe[1]);
+  }
+  if (threadSendPipe[0] != 0) {
+    close(threadSendPipe[0]);
+  }
+  if (threadSendPipe[1] != 0) {
+    close(threadSendPipe[1]);
   }
 }
 
@@ -46,20 +53,27 @@ bool Room::initializeRoom() {
   }
 
   // create pipe for thread communication
-  if (::pipe(threadPipe) == -1) {
+  if (::pipe(threadRecvPipe) == -1) {
+    fprintf(stderr, "pipe: %s (%d)\n", strerror(errno), errno);
+    return false;
+  }
+  if (::pipe(threadSendPipe) == -1) {
     fprintf(stderr, "pipe: %s (%d)\n", strerror(errno), errno);
     return false;
   }
 
   // set initial max file descriptor for selector
-  fdMax = hostSocket.getSocketFD() > threadPipe[0] ? hostSocket.getSocketFD() : threadPipe[0];
+  fdMax = hostSocket.getSocketFD();
+  fdMax = fdMax > threadRecvPipe[0] ? fdMax : threadRecvPipe[0];
+  fdMax = fdMax > threadSendPipe[0] ? fdMax : threadSendPipe[0];
 
   // clear the master sets
   FD_ZERO(&master);
   // add stdin, the hostSocket, and the pipe to selector list
   FD_SET(0, &master);
   FD_SET(hostSocket.getSocketFD(), &master);
-  FD_SET(threadPipe[0], &master);
+  FD_SET(threadRecvPipe[0], &master);
+  FD_SET(threadSendPipe[0], &master);
   return true;
 }
 
@@ -87,7 +101,7 @@ bool Room::launchRoom() {
     }
 
     // data from pipe, a thread has finished
-    if (FD_ISSET(threadPipe[0], &read_fds)) { 
+    if (FD_ISSET(threadRecvPipe[0], &read_fds)) { 
       /*
         When we get here, it means that a thread that was receiving an audio file has finished.
         So a song was added to the queue. Meaning that if the queue was empty, that song should play.
@@ -97,10 +111,26 @@ bool Room::launchRoom() {
       // read the data from the pipe, just one int. 
       // represents the fileDescriptor of the socket that was receiving an audio file
       int fdOfClientSocket = 0;
-      ::read(threadPipe[0], reinterpret_cast<void *>(&fdOfClientSocket), sizeof (int));
+      ::read(threadRecvPipe[0], reinterpret_cast<void *>(&fdOfClientSocket), sizeof (int));
 
       if (fdOfClientSocket < 0) { // when true, means that we need to remove that client
         fdOfClientSocket *= -1;
+        std::cout << "A client disconnected\n";
+        // remove it
+        clients.remove_if([fdOfClientSocket](room::Client &client){
+          return client.getSocket().getSocketFD() == fdOfClientSocket;
+        });
+      } else { // other wise its all good, continue
+        sendSongData();
+      }
+    }
+
+    if (FD_ISSET(threadSendPipe[0], &read_fds)) {
+      int fdOfClientSocket = 0;
+      ::read(threadSendPipe[0], reinterpret_cast<void *>(&fdOfClientSocket), sizeof (int));
+      if (fdOfClientSocket < 0) { // when true, means that we need to remove that client
+        fdOfClientSocket *= -1;
+        std::cout << "A client disconnected\n";
         // remove it
         clients.remove_if([fdOfClientSocket](room::Client &client){
           return client.getSocket().getSocketFD() == fdOfClientSocket;
@@ -108,7 +138,6 @@ bool Room::launchRoom() {
       } else { // other wise its all good, continue
         // add the client's socket FD back to select
         FD_SET(fdOfClientSocket, &master);
-        sendSongData();
       }
     }
 
@@ -222,20 +251,31 @@ void Room::handleClientRequest(room::Client &client, const std::byte *requestHea
   }
 }
 
+void Room::t(const std::vector<std::byte> *audio, room::Client *client) {
+  Message message;
+  message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
+  message.setBodySize(static_cast<unsigned int>(audio->size()));
+  int socketFD = client->getSocket().getSocketFD();
+  if (!client->getSocket().writeHeaderAndData(message.format().data(), audio->data(), audio->size())) {
+    std::cout << "write error\n";
+    socketFD *= -1;
+  }
+  ::write(threadSendPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
+}
+
 void Room::sendSongData() {
   Music *next = queue.getFront();
   if (next != nullptr) {
     const std::vector<std::byte> &audio = next->getBytes();
     for (room::Client &client : clients) {
-      Message message;
-      message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
-      message.setBodySize(static_cast<unsigned int>(audio.size()));
-      client.getSocket().writeHeaderAndData(message.format().data(), audio.data(), audio.size());
+      FD_CLR(client.getSocket().getSocketFD(), &master);
+      std::thread thread = std::thread(&Room::t, this, &audio, &client);
+      thread.detach();
     }
   }
 }
 
-void *Room::attemptAddSongToQueue(void *arg) {
+void Room::attemptAddSongToQueue(void *arg) {
   room::Client &client = *(static_cast<room::Client *>(arg));
   ThreadSafeSocket &socket = client.getSocket();
 
@@ -252,8 +292,8 @@ void *Room::attemptAddSongToQueue(void *arg) {
 
     // notify parent thread to add this socket back in select
     const int socketFD = socket.getSocketFD();
-    ::write(threadPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
-    return nullptr;
+    ::write(threadRecvPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
+    return;
   }
   // adding to the queue was successful
   // send a message back to client to confirm that they can continue to send the song
@@ -294,8 +334,8 @@ void *Room::attemptAddSongToQueue(void *arg) {
     }
   } while (false);
   // notify parent thread that this thread is done
-  ::write(threadPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
-  return nullptr;
+  ::write(threadRecvPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
+  return;
 }
 
 void Room::sendBasicResponse(ThreadSafeSocket& socket, Command response) {

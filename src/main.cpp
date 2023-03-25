@@ -81,6 +81,7 @@ void handleClient() {
       std::string input;
       std::getline(std::cin, input);
       if (input == "exit") {
+        p.pause();
         return;
       } else if (input == "send song") {
         client.sendMusicFile();

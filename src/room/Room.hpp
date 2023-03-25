@@ -38,7 +38,13 @@ private:
    * Pipe to communicate from child threads to parent thread.
    * This is used to allow child threads to notify when they have completed with select
   */
-  int threadPipe[2];
+  int threadRecvPipe[2];
+
+  /**
+   * Pipe to communicate from child threads to parent thread.
+   * This is used to allow child threads to notify when they have completed with select
+  */
+  int threadSendPipe[2];
 
   /**
    * mutex for queue
@@ -85,7 +91,10 @@ private:
    * Attempts to add a song to the queue
    * @param arg the client object to communicate with
   */
-  void *attemptAddSongToQueue(void *arg);
+  void attemptAddSongToQueue(void *arg);
+
+  void t(const std::vector<std::byte> *audio, room::Client *client);
+
 
   /**
    * Sends a header only response to the client
