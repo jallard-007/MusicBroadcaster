@@ -49,6 +49,7 @@ void Music::appendBytes(const std::vector<std::byte> &musicBytes) {
 bool Music::readFileAtPath() {
   FILE *fp = fopen(path.c_str(), "r");
   return readFileAtPtr(fp);
+  fclose(fp);
 }
 
 bool Music::readFileAtPtr(FILE *fp) {
@@ -60,7 +61,6 @@ bool Music::readFileAtPtr(FILE *fp) {
   const auto fileSize = (size_t)ftell(fp); // tell us the current position (this tells us the size of the file)
   if (fileSize > MAX_FILE_SIZE_BYTES) {
     std::cerr << "Error: File too big. Max file size is " << (MAX_FILE_SIZE_BYTES / 1000000.0) << " megabytes\n";
-    fclose(fp);
     return false;
   }
 
@@ -68,7 +68,6 @@ bool Music::readFileAtPtr(FILE *fp) {
   
   fseek(fp, 0L, SEEK_SET); // reset position to beginning of file
   fread((void *)bytes.data(), (size_t)fileSize, 1, fp); // read the file
-  fclose(fp); // close the file
 
   return true;
 }

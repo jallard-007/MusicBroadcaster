@@ -7,6 +7,8 @@
 #define MUSIC_STORAGE_H
 
 #include <list>
+#include <memory>
+
 #include "Music.hpp"
 
 #define MAX_SONGS 10
