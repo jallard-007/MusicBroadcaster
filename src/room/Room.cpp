@@ -150,9 +150,6 @@ bool Room::handleStdinCommands() {
 }
 
 void Room::processThreadFinishedReceiving() {
-  std::cout << "enter somethi gto consindf senfn: ";
-  std::string i;
-  std::getline(std::cin, i);
   int fdOfClientSocket = 0;
   ::read(threadRecvPipe[0], reinterpret_cast<void *>(&fdOfClientSocket), sizeof (int));
 
