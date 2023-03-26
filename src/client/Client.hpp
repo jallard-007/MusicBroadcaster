@@ -9,6 +9,7 @@
 #include <string>
 
 #include "../music/Player.hpp"
+#include "../music/MusicStorage.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
 class Client {
@@ -17,6 +18,7 @@ private:
   int fdMax;
   std::string clientName;
   ThreadSafeSocket clientSocket;
+  MusicStorage queue;
   Player audioPlayer;
   fd_set master;
 

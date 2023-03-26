@@ -16,11 +16,11 @@
 
 Client::Client():
   id{}, fdMax{}, clientName{},
-  clientSocket{}, audioPlayer{}, master{} {}
+  clientSocket{}, queue{}, audioPlayer{}, master{} {}
 
 Client::Client(std::string name):
   id{}, fdMax{}, clientName{std::move(name)},
-  clientSocket{}, audioPlayer{}, master{} {}
+  clientSocket{}, queue{}, audioPlayer{}, master{} {}
 
 bool Client::initializeClient() {
   const uint16_t port = getPort();
@@ -70,6 +70,13 @@ bool Client::handleStdinCommand() {
     return false;
   } else if (input == "send song") {
     sendMusicFile();
+  } else if (input == "play") {
+    FILE *fp = queue.getFront();
+    if (fp != nullptr) {
+      audioPlayer.feed(fp);
+      audioPlayer.play();
+      queue.removeFront();
+    }
   }
   return true;
 }
@@ -86,6 +93,7 @@ bool Client::handleServerMessage() {
   auto command = static_cast<Commands::Command>(mes.getCommand());
   switch (command) {
     case Commands::Command::SONG_DATA: {
+      FILE *fp = queue.add();
       Music music;
       music.getBytes().resize(size);
       if (clientSocket.readAll(music.getBytes().data(), size) == 0) {
@@ -93,8 +101,7 @@ bool Client::handleServerMessage() {
         std::cout << "lost connection to room\n";
         return false;
       }
-      audioPlayer.feed(&music);
-      audioPlayer.play();
+      music.writeToFile(fp);
       break;
     }
     default:

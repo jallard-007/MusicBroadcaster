@@ -59,16 +59,9 @@ public:
 
   /**
    * feed audio data to mpg123
-   * @param food pointer to audio data
-   * @param foodSize size of audio data
+   * @param fp pointer to FILE containing audio data
   */
-  void feed(unsigned char *food, size_t foodSize);
-
-  /**
-   * feed audio data to mpg123
-   * @param music pointer to music object
-  */
-  void feed(Music *music);
+  void feed(FILE *fp);
 
   /**
    * plays audio which as been fed to mpg123
