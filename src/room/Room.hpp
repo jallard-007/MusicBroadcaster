@@ -79,21 +79,40 @@ private:
   /**
    * Handles incoming messages from the client.
    * @param client reference to client object
+   * @returns false if the client should be removed, true otherwise
   */
-  void handleClientRequest(room::Client& client, const std::byte *requestHeader);
+  bool handleClientRequest(room::Client& client);
+
+  /**
+   * Handles all stdin input
+  */
+  bool handleStdinCommands();
+
+  /**
+   * 
+  */
+  void processThreadFinishedReceiving();
+
+  /**
+   * 
+  */
+  void processThreadFinishedSending();
+
+  /**
+   * Sends song data to a specific client
+  */
+  void sendSongDataToClient(const std::vector<std::byte> &audio, room::Client &client);
 
   /**
    * Attempts to send the next song to all clients client
   */
-  void sendSongData();
+  void sendSongToAllClients();
 
   /**
    * Attempts to add a song to the queue
-   * @param arg the client object to communicate with
+   * @param clientPtr pointer to the client object to communicate with
   */
-  void attemptAddSongToQueue(void *arg);
-
-  void t(const std::vector<std::byte> *audio, room::Client *client);
+  void attemptAddSongToQueue(room::Client *clientPtr);
 
 
   /**
@@ -120,9 +139,8 @@ public:
 
   /**
    * launch the room. Accepts incoming connections and manages the room
-   * @returns false on error, true if exited cleanly (user entered exit)
   */
-  bool launchRoom();
+  void launchRoom();
 
   /**
    * set ip
