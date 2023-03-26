@@ -27,7 +27,7 @@ public:
    * Constructor which takes a file descriptor for the socket
    * @param socketFD file descriptor
   */
-  BaseSocket(int socketFD);
+  explicit BaseSocket(int socketFD);
 
   /**
    * Copy constructor. deleted since the destructor closes the socket, use std::move to assign instead
@@ -37,7 +37,7 @@ public:
   /**
    * Move constructor. sets original object's file descriptor to 0 so that it does not close the original socket
    */
-  BaseSocket(BaseSocket &&);
+  BaseSocket(BaseSocket &&) noexcept ;
 
   /**
    * Destructor. Closes the socket
@@ -47,7 +47,7 @@ public:
   /**
    * Getter for socketFD
   */
-  int getSocketFD() const;
+  [[nodiscard]] int getSocketFD() const;
 
   /**
    * Setter for socketFD
@@ -74,13 +74,13 @@ public:
   /**
    * Call after BaseSocket::bind() to allow incoming requests to connect
   */
-  bool listen(int backlog = 20) const;
+  [[nodiscard]] bool listen(int backlog = 20) const;
 
   /**
    * Accepts connection requests. This is blocking, current thread will wait til a request comes through
    * @returns BaseSocket object with the new file descriptor
   */
-  BaseSocket accept() const;
+  [[nodiscard]] BaseSocket accept() const;
 
   /**
    * Write raw data to socketFD

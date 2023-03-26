@@ -12,9 +12,9 @@
 #include <sys/select.h>
 #include "Client.hpp"
 #include "../socket/BaseSocket.hpp"
-#include "../socket/ThreadSafeSocket.hpp"
 #include "../music/MusicStorage.hpp"
 #include "../messaging/Commands.hpp"
+#include "../socket/ThreadSafeSocket.hpp"
 
 class Room {
 private:
@@ -86,7 +86,7 @@ private:
   /**
    * Handles all stdin input
   */
-  bool handleStdinCommands();
+  static bool handleStdinCommands();
 
   /**
    * 
@@ -120,7 +120,7 @@ private:
    * @param socket socket to send to
    * @param responseCommand one of the responses define in Commands.hpp
   */
-  void sendBasicResponse(ThreadSafeSocket& socket, Commands::Command responseCommand);
+  static void sendBasicResponse(ThreadSafeSocket& socket, Commands::Command responseCommand);
 
 public:
 

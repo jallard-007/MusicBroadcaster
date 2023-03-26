@@ -35,18 +35,18 @@ private:
   mutable std::mutex writeLock;
 
 public:
-  ThreadSafeSocket() = default;
+  ThreadSafeSocket();
 
   /**
    * Constructor which takes a file descriptor for the socket
    * @param socketFD file descriptor
   */
-  ThreadSafeSocket(int socketFD);
+  explicit ThreadSafeSocket(int socketFD);
 
   /**
    * Move BaseSocket object into ThreadSafe
   */
-  ThreadSafeSocket(BaseSocket &&);
+  explicit ThreadSafeSocket(BaseSocket &&);
 
   /**
    * Copy constructor. deleted since the destructor closes the socket, use std::move to assign instead
@@ -56,7 +56,7 @@ public:
   /**
    * Move constructor. sets original object's file descriptor to 0 so that it does not close the original socket
    */
-  ThreadSafeSocket(ThreadSafeSocket &&);
+  ThreadSafeSocket(ThreadSafeSocket &&) noexcept ;
 
   /**
    * Destructor. Closes the socket
@@ -67,6 +67,15 @@ public:
    * Getter for socketFD
   */
   int getSocketFD() const;
+
+  /**
+   * Attempts to connect via IP and port to another TCP socket
+   * @param ip ip address, can be numerical or domain name.
+   * Example 0, 127.0.0.1, and localhost all do the same thing
+   * @param port port number of process
+   * @returns true on successful connection, false on error
+  */
+  bool connect(const std::string &ip, uint16_t port);
 
   /**
    * Write raw data to socketFD

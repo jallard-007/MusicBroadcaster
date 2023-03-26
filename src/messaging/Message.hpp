@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MESSAGE_H
+#define MESSAGE_H
 
 #include <vector>
 #include <cstddef>
@@ -42,7 +43,7 @@ private:
      * @brief This will calculate the body size from the body
      * 
      */
-    inline unsigned int calculateBodySize() const;
+    [[nodiscard]] inline unsigned int calculateBodySize() const;
 
 public:
 
@@ -56,14 +57,14 @@ public:
    * @brief Construct a new Message object
    * 
    */
-  Message(const std::byte *header);
+  explicit Message(const std::byte *header);
 
   /**
    * @brief Construct a new Message object with the given message in bytes
    * 
    * @param message This a message in binary data
    */
-  Message(const std::vector<std::byte>& message);
+  explicit Message(const std::vector<std::byte>& message);
 
   /**
    * @brief Destroy the Message object
@@ -90,63 +91,64 @@ public:
    * 
    * @return std::byte
    */
-  std::byte getCommand() const;
+  [[nodiscard]] std::byte getCommand() const;
 
   /**
    * @brief Get the Options object
    * 
    * @return std::byte
    */
-  std::byte getOptions() const;
+  [[nodiscard]] std::byte getOptions() const;
 
   /**
    * @brief Get the Body Size object
    * 
    * @return unsigned int
    */
-  unsigned int getBodySize() const;
+  [[nodiscard]] unsigned int getBodySize() const;
 
   /**
    * @brief Get the Body object
    * 
    * @return const std::vector<std::byte>& 
    */
-  const std::vector<std::byte>& getBody() const;
+  [[nodiscard]] const std::vector<std::byte>& getBody() const;
 
   /**
    * @brief Set the Command object
    * 
-   * @param command 
+   * @param byte
    */
-  void setCommand(const std::byte command);
+  void setCommand(std::byte byte);
 
   /**
    * @brief Set the Options object
    * 
-   * @param options 
+   * @param byte
    */
-  void setOptions(const std::byte options);
+  void setOptions(std::byte byte);
 
   /**
    * @brief Set the Body object
    * 
-   * @param body 
+   * @param vector
    */
-  void setBody(const std::vector<std::byte>& body);
+  void setBody(const std::vector<std::byte>& vector);
 
     /**
    * @brief Set the BodySize object
    * 
-   * @param bodySize
+   * @param size
    */
-  void setBodySize(unsigned int bodySize);
+  void setBodySize(unsigned int size);
 
   /**
    * @brief This will format all the information in the message into a vector of bytes.
    * 
    * @return const std::vector<std::byte> 
    */
-  const std::vector<std::byte> format() const;
+  [[nodiscard]] std::vector<std::byte> format() const;
 
 };
 
+#endif

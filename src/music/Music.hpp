@@ -20,17 +20,17 @@ public:
   Music() = default;
   ~Music() = default;
   
-  Music(const std::string &);
+  explicit Music(std::string );
 
   /**
    * Used to create an instance with a local file
    */
-  Music(const std::string &name, const std::string &path);
+  Music(std::string name, std::string path);
 
   /**
    * Used to create an instance with a downloaded stream
    */
-  Music(const std::string &, const std::vector<std::byte> &);
+  Music(std::string , const std::vector<std::byte> &);
 
   /**
    * Attemps to read the file at Music::path and store the contents in Music::bytes

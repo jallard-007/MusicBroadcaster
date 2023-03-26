@@ -31,6 +31,8 @@ Message::Message(const std::vector<std::byte>& message) {
     /* Get the options from the second */
     this->options = message[1];
 
+    this->bodySize = static_cast<unsigned int>(message.size());
+
     /* Get the body from the rest of the message */
     this->body.insert(this->body.begin(), message.begin() + 6, message.end());
 
@@ -56,24 +58,24 @@ const std::vector<std::byte>& Message::getBody() const {
     return this->body;
 }
 
-/* Sets the command */
-void Message::setCommand(const std::byte command) {
-    this->command = command;
+/* Sets the byte */
+void Message::setCommand(const std::byte byte) {
+    this->command = byte;
 }
 
-/* Sets the options */
-void Message::setOptions(const std::byte options) {
-    this->options = options;
+/* Sets the byte */
+void Message::setOptions(const std::byte byte) {
+    this->options = byte;
+}
+
+/* Sets the vector */
+void Message::setBody(const std::vector<std::byte>& vector) {
+    this->body = vector;
 }
 
 /* Sets the body */
-void Message::setBody(const std::vector<std::byte>& body) {
-    this->body = body;
-}
-
-/* Sets the body */
-void Message::setBodySize(const unsigned int bodySize) {
-    this->bodySize = bodySize;
+void Message::setBodySize(const unsigned int size) {
+    this->bodySize = size;
 }
 
 inline unsigned int Message::calculateBodySize() const {
@@ -81,7 +83,7 @@ inline unsigned int Message::calculateBodySize() const {
 }
 
 /* Formats the message into a vector of bytes */
-const std::vector<std::byte> Message::format() const {
+std::vector<std::byte> Message::format() const {
 
     /* Create a vector of bytes to hold the message */
     std::vector<std::byte> message;

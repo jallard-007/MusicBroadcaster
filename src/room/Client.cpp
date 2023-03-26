@@ -3,16 +3,16 @@
  * Implementation file for server side client class
 */
 
-#include <thread>
-#include "../socket/ThreadSafeSocket.hpp"
+#include <utility>
+
 #include "Client.hpp"
 
 room::Client::Client(): name{}, socket{} {}
 
-room::Client::Client(const std::string &name, ThreadSafeSocket &&socket):
-  name{name}, socket{std::move(socket)} {}
+room::Client::Client(std::string name, ThreadSafeSocket &&socket):
+  name{std::move(name)}, socket{std::move(socket)} {}
 
-room::Client::Client(Client &&moved):
+room::Client::Client(Client &&moved) noexcept:
   name{std::move(moved.name)}, socket{std::move(moved.socket)} {}
 
 bool room::Client::operator==(const room::Client &rhs) const {

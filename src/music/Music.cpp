@@ -5,22 +5,22 @@
 
 #include <iostream>
 #include <fstream>
-#include <iterator>
+#include <utility>
 #include <vector>
 #include "Music.hpp"
 
-Music::Music(const std::string &songName):
-  name{songName}, path{}, bytes{} {}
+Music::Music(std::string songName):
+  name{std::move(songName)}, path{}, bytes{} {}
 
 Music::Music(
-  const std::string &songName,
-  const std::string &filePath
-): name{songName}, path{filePath}, bytes{} {}
+  std::string songName,
+  std::string filePath
+): name{std::move(songName)}, path{std::move(filePath)}, bytes{} {}
 
 Music::Music(
-  const std::string &songName,
+  std::string songName,
   const std::vector<std::byte> &buffer
-): name{songName}, path{}, bytes{buffer} {}
+): name{std::move(songName)}, path{}, bytes{buffer} {}
 
 const std::string &Music::getName() const {
   return name;
@@ -53,7 +53,7 @@ bool Music::readFileAtPath() {
     return false;
   }
   fseek(fp, 0L, SEEK_END); // go to the end of the file
-  const size_t fileSize = (size_t)ftell(fp); // tell us the current position (this tells us the size of the file)
+  const auto fileSize = (size_t)ftell(fp); // tell us the current position (this tells us the size of the file)
   if (fileSize > MAX_FILE_SIZE_BYTES) {
     std::cerr << "Error: File too big. Max file size is " << (MAX_FILE_SIZE_BYTES / 1000000.0) << " megabytes\n";
     fclose(fp);

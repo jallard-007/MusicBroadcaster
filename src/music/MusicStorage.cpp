@@ -3,7 +3,6 @@
  * Implementation file for music storage class
 */
 
-#include <iostream>
 #include <string>
 #include "Music.hpp"
 #include "MusicStorage.hpp"
@@ -33,7 +32,7 @@ Music *MusicStorage::add() {
     // no more room in queue
     return nullptr;
   }
-  songs.emplace_back(Music{"", ""});
+  songs.emplace_back("", "");
   return &songs.back();
 }
 
@@ -42,7 +41,7 @@ Music *MusicStorage::addByName(const std::string &musicName) {
     // no more room in queue
     return nullptr;
   }
-  songs.emplace_back(Music{musicName, ""});
+  songs.emplace_back(musicName, "");
   return &songs.back();
 }
 

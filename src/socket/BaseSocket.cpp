@@ -7,7 +7,6 @@
 #include <vector>
 #include <cstring>
 #include <iostream>
-#include <fstream>
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -23,7 +22,7 @@ BaseSocket::~BaseSocket() {
   }
 }
 
-BaseSocket::BaseSocket(BaseSocket &&moved): socketFD{moved.socketFD} {
+BaseSocket::BaseSocket(BaseSocket &&moved) noexcept : socketFD{moved.socketFD} {
   moved.socketFD = 0;
 }
 
@@ -32,7 +31,7 @@ void BaseSocket::setSocketFD(int newFD) {
 }
 
 bool BaseSocket::connect(const std::string &ip, const uint16_t port) {
-  struct addrinfo hints;
+  struct addrinfo hints{};
   struct addrinfo *res;  // will point to the results
   memset(&hints, 0, sizeof hints); // make sure the struct is empty
   hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
@@ -41,7 +40,7 @@ bool BaseSocket::connect(const std::string &ip, const uint16_t port) {
   if (getaddrinfo(ip.c_str(), std::to_string(port).c_str(), &hints, &res) == -1) {
     fprintf(stderr, "getaddrinfo: %s (%d)\n", strerror(errno), errno);
     return false;
-  };
+  }
 
   // create socket
   socketFD = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
@@ -62,8 +61,7 @@ bool BaseSocket::connect(const std::string &ip, const uint16_t port) {
 }
 
 bool BaseSocket::write(const std::byte *data, const size_t dataSize) const {
-  ssize_t numSent = 0;
-  if ((numSent = send(socketFD, data, dataSize, 0)) == -1) {
+  if (send(socketFD, data, dataSize, 0) == -1) {
     fprintf(stderr, "send: %s (%d)\n", strerror(errno), errno);
     return false;
   }
@@ -92,7 +90,7 @@ size_t BaseSocket::readAll(std::byte *buffer, const size_t bufferSize) const {
     totalBytesRead += static_cast<size_t>(bytesRead);
   } while (totalBytesRead < bufferSize);
   if (totalBytesRead != bufferSize) {
-    // should not be possible to reach here, but just incase...
+    // should not be possible to reach here, but just in case...
     std::cerr << "Error reading from socket. Amount read does not match amount requested to read\n";
     exit(1);
   }
@@ -101,7 +99,7 @@ size_t BaseSocket::readAll(std::byte *buffer, const size_t bufferSize) const {
 
 bool BaseSocket::bind(const std::string &host, const uint16_t port) {
   // first, load up address structs with getaddrinfo():
-  struct addrinfo hints;
+  struct addrinfo hints{};
   struct addrinfo *res;
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_UNSPEC; // use IPv4 or IPv6, whichever
@@ -109,7 +107,7 @@ bool BaseSocket::bind(const std::string &host, const uint16_t port) {
   if (getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints, &res) == -1) {
     fprintf(stderr, "getaddrinfo: %s (%d)\n", strerror(errno), errno);
     return false;
-  };
+  }
 
   if (res == nullptr) {
     fprintf(stderr, "no results for \"%s\"\n", host.c_str());
@@ -152,7 +150,7 @@ bool BaseSocket::listen(int backlog) const {
 }
 
 BaseSocket BaseSocket::accept() const {
-  struct sockaddr serverAddr; // not used at the moment
+  struct sockaddr serverAddr{}; // not used at the moment
   socklen_t sockLen = sizeof (serverAddr);
   const int clientFD = ::accept(socketFD, &serverAddr, &sockLen); 
   if (clientFD == -1) {

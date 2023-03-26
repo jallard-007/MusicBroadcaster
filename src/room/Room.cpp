@@ -14,10 +14,6 @@
 #include "Room.hpp"
 #include "Client.hpp"
 #include "../CLInput.hpp"
-#include "../socket/BaseSocket.hpp"
-#include "../socket/ThreadSafeSocket.hpp"
-#include "../messaging/Message.hpp"
-#include "../messaging/Commands.hpp"
 
 using namespace Commands;
 
@@ -78,7 +74,7 @@ bool Room::initializeRoom() {
 }
 
 void Room::launchRoom() {
-  while (1) {
+  while (true) {
     fd_set read_fds = master;  // temp file descriptor list for select()
     if (::select(fdMax + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
       fprintf(stderr, "select: %s (%d)\n", strerror(errno), errno);
@@ -108,7 +104,7 @@ void Room::launchRoom() {
     }
 
     // loop through all clients to see if they sent something
-    std::list<room::Client>::iterator client = clients.begin();
+    auto client = clients.begin();
     while (client != clients.end()) {
       // request from a client
       if (FD_ISSET(client->getSocket().getSocketFD(), &read_fds)) {
@@ -194,7 +190,7 @@ bool Room::handleClientRequest(room::Client &client) {
   // convert header to message
   Message message(requestHeader);
   // handle every supported message here
-  Command command = static_cast<Command>(message.getCommand());
+  auto command = static_cast<Command>(message.getCommand());
   switch(command) {
     case Command::REQ_ADD_TO_QUEUE: {
       // remove the socket from the master list since we want only the child thread to read from it.
@@ -261,7 +257,7 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
     // read in the header, create message object from it
     std::byte requestHeader[6];
     {
-      const unsigned int numBytesRead = static_cast<unsigned int>(socket.readAll(requestHeader,  sizeof requestHeader));
+      const auto numBytesRead = static_cast<unsigned int>(socket.readAll(requestHeader,  sizeof requestHeader));
       if (numBytesRead <= 0) {
         // either client disconnected half way through, or some other error. Scrap it
         queue.removeByAddress(queueEntry);
@@ -279,7 +275,7 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
 
     std::byte *dataPointer = queueEntry->getBytes().data();
 
-    const unsigned int numBytesRead = static_cast<unsigned int>(socket.readAll(dataPointer, sizeOfFile));
+    const auto numBytesRead = static_cast<unsigned int>(socket.readAll(dataPointer, sizeOfFile));
     if (numBytesRead <= 0) {
       // either client disconnected half way through, or some other error. Scrap it
       queue.removeByAddress(queueEntry);
@@ -292,7 +288,6 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
 
   // notify parent thread that this thread is done
   ::write(threadRecvPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
-  return;
 }
 
 void Room::sendBasicResponse(ThreadSafeSocket& socket, Command response) {

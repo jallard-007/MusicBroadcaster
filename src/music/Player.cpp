@@ -6,17 +6,14 @@
 #include <ao/ao.h>
 #include <mpg123.h>
 #include <thread>
-#include <cstddef>
 #include <iostream>
 #include "Player.hpp"
 #include "Music.hpp"
 
-Player::Player(): driver{}, shouldPlay{false}, outBufferSize{0},
-  outBuffer{nullptr}, mh{}, dev{nullptr}, player{}
-{
+Player::Player(): shouldPlay{false}, dev{nullptr}, player{} {
   ao_initialize();
   driver = ao_default_driver_id();
-  mh = mpg123_new(NULL, NULL);
+  mh = mpg123_new(nullptr, nullptr);
   mpg123_param(mh, MPG123_ADD_FLAGS, MPG123_IGNORE_STREAMLENGTH, 0); // removes warning message on 'Frankenstein'
   mpg123_open_feed(mh);
   outBufferSize = mpg123_outblock(mh);
@@ -42,11 +39,11 @@ void Player::_newFormat() {
   int channels, encoding;
   long rate;
   mpg123_getformat(mh, &rate, &channels, &encoding);
-  ao_sample_format format = {(int)mpg123_encsize(encoding) * BITS, (int)rate, channels, AO_FMT_NATIVE, 0};
+  ao_sample_format format = {(int)mpg123_encsize(encoding) * BITS, (int)rate, channels, AO_FMT_NATIVE, nullptr};
   if (dev != nullptr) {
     ao_close(dev);
   }
-  dev = ao_open_live(driver, &format, NULL);
+  dev = ao_open_live(driver, &format, nullptr);
 }
 
 void Player::play() {

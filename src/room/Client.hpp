@@ -40,12 +40,12 @@ namespace room {
      * @param name name of client
      * @param socket socket associated with this client
     */
-    Client(const std::string &name, ThreadSafeSocket &&socket);
+    Client(std::string name, ThreadSafeSocket &&socket);
 
     /**
      * Move constructor
     */
-    Client(Client &&moved);
+    Client(Client &&moved) noexcept ;
 
     /**
      * Delete the copy constructor. This is because BaseSocket closes the file descriptor in its destructor so we cannot copy

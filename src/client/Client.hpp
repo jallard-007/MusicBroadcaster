@@ -7,29 +7,18 @@
 #define CLIENT_CLASS_H
 
 #include <string>
-#include "../socket/BaseSocket.hpp"
+
+#include "../music/Player.hpp"
+#include "../socket/ThreadSafeSocket.hpp"
 
 class Client {
 private:
   int id;
+  int fdMax;
   std::string clientName;
-  BaseSocket clientSocket;
-public:
-  Client() = default;
-  ~Client() = default;
-
-  /**
-   * Constructor
-   * @param name name of client
-  */
-  Client(const std::string &name);
-
-  /**
-   * Constructor
-   * @param name name of client
-   * @param socket socket associated with this client
-  */
-  Client(const std::string &name, BaseSocket &&socket);
+  ThreadSafeSocket clientSocket;
+  Player audioPlayer;
+  fd_set master;
 
   /**
    * Asks for the path to the file.
@@ -37,9 +26,26 @@ public:
   */
   void sendMusicFile();
 
-  [[nodiscard]] const BaseSocket &getSocket() const;
+  bool handleStdinCommand();
+
+  bool handleServerMessage();
+
+public:
+  Client();
+  ~Client() = default;
+
+  /**
+   * Constructor
+   * @param name name of client
+  */
+  explicit Client(std::string name);
+
+  bool initializeClient();
+
+  void handleClient();
+
+  [[nodiscard]] const ThreadSafeSocket &getSocket() const;
   [[nodiscard]] const std::string &getName() const;
-  void setSocket(BaseSocket &&socket);
   void setName(std::string);
   int getId() const;
 };
