@@ -48,6 +48,10 @@ void Music::appendBytes(const std::vector<std::byte> &musicBytes) {
 
 bool Music::readFileAtPath() {
   FILE *fp = fopen(path.c_str(), "r");
+  return readFileAtPtr(fp);
+}
+
+bool Music::readFileAtPtr(FILE *fp) {
   if (fp == nullptr) {
     std::cerr << "Error: Unable to open file\n";
     return false;
@@ -67,4 +71,8 @@ bool Music::readFileAtPath() {
   fclose(fp); // close the file
 
   return true;
+}
+
+void Music::writeToFile(FILE *fp) {
+  fwrite(bytes.data(), 1, bytes.size(), fp);
 }

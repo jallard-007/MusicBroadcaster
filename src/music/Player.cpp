@@ -68,6 +68,21 @@ void Player::wait() {
   }
 }
 
+void Player::seek(float time) {
+  const auto offset = static_cast<off_t>(time * MP3_FRAMES_PER_SEC);
+  if (offset > mpg123_tellframe(mh)) {
+    // need to find way to go back
+    return;
+  }
+  if (mpg123_seek_frame(mh, offset, SEEK_SET) < 0) {
+    mpg123_strerror(mh);
+  }
+}
+
+void Player::clear() {
+
+}
+
 void Player::_play() {
   std::size_t done;
   while (shouldPlay) {
@@ -76,8 +91,11 @@ void Player::_play() {
     if (err == MPG123_NEW_FORMAT) {
       // new format as been detected, handle it
       _newFormat();
+    } else if (err == MPG123_NEED_MORE) {
+      // this means that there is no more audio to read, feed it the next song!
+      shouldPlay = false;
     } else if (err != MPG123_OK) {
-      // this most likely means that there is no more audio to read but could be something else
+      // some error
       shouldPlay = false;
     }
     // play the audio

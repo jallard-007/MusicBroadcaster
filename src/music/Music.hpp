@@ -39,6 +39,13 @@ public:
   bool readFileAtPath();
 
   /**
+   * Attemps to read the file at Music::path and store the contents in Music::bytes
+   * @returns true on success, false otherwise
+  */
+  bool readFileAtPtr(FILE *);
+
+  void writeToFile(FILE *);
+  /**
    * Setters and getters
   */
  

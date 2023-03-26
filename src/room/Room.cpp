@@ -150,6 +150,9 @@ bool Room::handleStdinCommands() {
 }
 
 void Room::processThreadFinishedReceiving() {
+  std::cout << "enter somethi gto consindf senfn: ";
+  std::string i;
+  std::getline(std::cin, i);
   int fdOfClientSocket = 0;
   ::read(threadRecvPipe[0], reinterpret_cast<void *>(&fdOfClientSocket), sizeof (int));
 
@@ -211,24 +214,23 @@ bool Room::handleClientRequest(room::Client &client) {
   return true;
 }
 
-void Room::sendSongDataToClient(const std::vector<std::byte> &audio, room::Client &client) {
+void Room::sendSongDataToClient(std::shared_ptr<Music> audio, room::Client &client) {
   Message message;
   message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
-  message.setBodySize(static_cast<unsigned int>(audio.size()));
+  message.setBodySize(static_cast<unsigned int>(audio.get()->getBytes().size()));
   int socketFD = client.getSocket().getSocketFD();
-  if (!client.getSocket().writeHeaderAndData(message.format().data(), audio.data(), audio.size())) {
+  if (!client.getSocket().writeHeaderAndData(message.format().data(), audio.get()->getBytes().data(), audio.get()->getBytes().size())) {
     socketFD *= -1;
   }
   ::write(threadSendPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
 }
 
 void Room::sendSongToAllClients() {
-  Music *next = queue.getFront();
+  auto next = queue.getFrontMem();
   if (next != nullptr) {
-    const std::vector<std::byte> &audio = next->getBytes();
     for (room::Client &client : clients) {
       FD_CLR(client.getSocket().getSocketFD(), &master);
-      std::thread thread = std::thread(&Room::sendSongDataToClient, this, std::ref(audio), std::ref(client));
+      std::thread thread = std::thread(&Room::sendSongDataToClient, this, next, std::ref(client));
       thread.detach();
     }
   }
@@ -243,7 +245,7 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
     // wait till we acquire the lock
     std::unique_lock<std::mutex> lock{queueMutex};
     // add a Music object into the queue
-    Music *queueEntry = queue.add();
+    FILE *queueEntry = queue.add();
 
     if (queueEntry == nullptr) {
       // adding to queue was unsuccessful
@@ -270,10 +272,10 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
 
     // get size of message from message object
     const unsigned int sizeOfFile = message.getBodySize();
+    Music music;
+    music.getBytes().resize(sizeOfFile); 
 
-    queueEntry->getBytes().resize(sizeOfFile); 
-
-    std::byte *dataPointer = queueEntry->getBytes().data();
+    std::byte *dataPointer = music.getBytes().data();
 
     const auto numBytesRead = static_cast<unsigned int>(socket.readAll(dataPointer, sizeOfFile));
     if (numBytesRead <= 0) {
@@ -282,6 +284,7 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
       // make FD negative to tell parent thread we need to remove the client
       socketFD *= -1;
     }
+    music.writeToFile(queueEntry);
   };
 
   process();

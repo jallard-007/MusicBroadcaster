@@ -20,46 +20,26 @@ private:
   /**
    * we dont need the music objects to be next to each other, so use a list
   */
-  std::list<Music> songs;
+  std::list<FILE *> songs;
 
 public:
   MusicStorage();
   ~MusicStorage() = default;
 
-  void removeByPath(const std::string &);
-  void removeByName(const std::string &);
-
   /**
    * Removes a music object by its address in memory
   */
-  void removeByAddress(Music *);
+  void removeByAddress(FILE *);
 
   /**
    * Add an unnamed Music object to the back of the list
    * @returns pointer to the new Music object, nullptr if no room
   */
-  Music *add();
+  FILE *add();
 
-  /**
-   * Adds a Music object to the list
-   * @param musicName name of music
-   * @returns pointer to the new Music object, nullptr if no room
-   */
-  Music *addByName(const std::string &);
+  [[nodiscard]] FILE *getFront();
+  [[nodiscard]] std::shared_ptr<Music> getFrontMem();
 
-  /**
-   * Gets a music object by its path property
-   * @returns pointer to object, nullptr if the object is not in the list
-   */
-  [[nodiscard]] Music *getByPath(const std::string &);
-
-  /**
-   * Gets a music object by its name property
-   * @returns pointer to object, nullptr if the object is not in the list
-  */
-  [[nodiscard]] Music *getByName(const std::string &);
-
-  [[nodiscard]] Music *getFront();
   void removeFront();
 };
 

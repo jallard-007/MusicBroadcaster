@@ -101,7 +101,7 @@ private:
   /**
    * Sends song data to a specific client
   */
-  void sendSongDataToClient(const std::vector<std::byte> &audio, room::Client &client);
+  void sendSongDataToClient(std::shared_ptr<Music> audio, room::Client &client);
 
   /**
    * Attempts to send the next song to all clients client
