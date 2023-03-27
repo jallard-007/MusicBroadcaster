@@ -22,7 +22,7 @@ BaseSocket::~BaseSocket() {
   }
 }
 
-BaseSocket::BaseSocket(BaseSocket &&moved) noexcept : socketFD{moved.socketFD} {
+BaseSocket::BaseSocket(BaseSocket &&moved) noexcept: socketFD{moved.socketFD} {
   moved.socketFD = 0;
 }
 

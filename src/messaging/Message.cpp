@@ -19,7 +19,7 @@ Message::Message() {
 Message::Message(const std::byte* header) {
     this->command = header[0];
     this->options = header[1];
-    this->bodySize = *reinterpret_cast<const unsigned int *>(header + 2);
+    this->bodySize = *reinterpret_cast<const uint32_t *>(header + 2);
 }
 
 /* Constructor that takes the binary version of a message */
@@ -31,7 +31,7 @@ Message::Message(const std::vector<std::byte>& message) {
     /* Get the options from the second */
     this->options = message[1];
 
-    this->bodySize = static_cast<unsigned int>(message.size());
+    this->bodySize = static_cast<uint32_t>(message.size());
 
     /* Get the body from the rest of the message */
     this->body.insert(this->body.begin(), message.begin() + 6, message.end());
@@ -49,7 +49,7 @@ std::byte Message::getOptions() const {
 }
 
 /* Gets the size of the body */
-unsigned int Message::getBodySize() const {
+uint32_t Message::getBodySize() const {
     return bodySize;
 }
 
@@ -74,12 +74,12 @@ void Message::setBody(const std::vector<std::byte>& vector) {
 }
 
 /* Sets the body */
-void Message::setBodySize(const unsigned int size) {
+void Message::setBodySize(const uint32_t size) {
     this->bodySize = size;
 }
 
-inline unsigned int Message::calculateBodySize() const {
-    return (unsigned int)this->body.size();
+inline uint32_t Message::calculateBodySize() const {
+    return (uint32_t)this->body.size();
 }
 
 /* Formats the message into a vector of bytes */

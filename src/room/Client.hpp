@@ -45,7 +45,7 @@ namespace room {
     /**
      * Move constructor
     */
-    Client(Client &&moved) noexcept ;
+    Client(Client &&moved) noexcept;
 
     /**
      * Delete the copy constructor. This is because BaseSocket closes the file descriptor in its destructor so we cannot copy

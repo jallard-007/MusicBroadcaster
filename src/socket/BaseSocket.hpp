@@ -37,7 +37,7 @@ public:
   /**
    * Move constructor. sets original object's file descriptor to 0 so that it does not close the original socket
    */
-  BaseSocket(BaseSocket &&) noexcept ;
+  BaseSocket(BaseSocket &&) noexcept;
 
   /**
    * Destructor. Closes the socket

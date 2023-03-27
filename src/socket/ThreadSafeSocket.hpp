@@ -56,7 +56,7 @@ public:
   /**
    * Move constructor. sets original object's file descriptor to 0 so that it does not close the original socket
    */
-  ThreadSafeSocket(ThreadSafeSocket &&) noexcept ;
+  ThreadSafeSocket(ThreadSafeSocket &&) noexcept;
 
   /**
    * Destructor. Closes the socket

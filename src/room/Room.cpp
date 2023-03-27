@@ -214,7 +214,7 @@ bool Room::handleClientRequest(room::Client &client) {
 void Room::sendSongDataToClient(std::shared_ptr<Music> audio, room::Client &client) {
   Message message;
   message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
-  message.setBodySize(static_cast<unsigned int>(audio.get()->getBytes().size()));
+  message.setBodySize(static_cast<uint32_t>(audio.get()->getBytes().size()));
   int socketFD = client.getSocket().getSocketFD();
   if (!client.getSocket().writeHeaderAndData(message.format().data(), audio.get()->getBytes().data(), audio.get()->getBytes().size())) {
     socketFD *= -1;
@@ -256,7 +256,7 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
     // read in the header, create message object from it
     std::byte requestHeader[6];
     {
-      const auto numBytesRead = static_cast<unsigned int>(socket.readAll(requestHeader,  sizeof requestHeader));
+      const auto numBytesRead = static_cast<uint32_t>(socket.readAll(requestHeader,  sizeof requestHeader));
       if (numBytesRead <= 0) {
         // either client disconnected half way through, or some other error. Scrap it
         queue.removeByAddress(queueEntry);
@@ -268,13 +268,13 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
     const Message message(requestHeader);
 
     // get size of message from message object
-    const unsigned int sizeOfFile = message.getBodySize();
+    const uint32_t sizeOfFile = message.getBodySize();
     Music music;
     music.getBytes().resize(sizeOfFile); 
 
     std::byte *dataPointer = music.getBytes().data();
 
-    const auto numBytesRead = static_cast<unsigned int>(socket.readAll(dataPointer, sizeOfFile));
+    const auto numBytesRead = static_cast<uint32_t>(socket.readAll(dataPointer, sizeOfFile));
     if (numBytesRead <= 0) {
       // either client disconnected half way through, or some other error. Scrap it
       queue.removeByAddress(queueEntry);

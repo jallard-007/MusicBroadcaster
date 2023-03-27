@@ -89,7 +89,7 @@ bool Client::handleServerMessage() {
     return false;
   }
   Message mes(responseHeader);
-  const unsigned int size = mes.getBodySize();
+  const uint32_t size = mes.getBodySize();
   auto command = static_cast<Commands::Command>(mes.getCommand());
   switch (command) {
     case Commands::Command::SONG_DATA: {
@@ -153,7 +153,7 @@ void Client::sendMusicFile() {
   }
   Message header;
   header.setCommand((std::byte)Commands::Command::SONG_DATA);
-  header.setBodySize((unsigned int)music.getBytes().size());
+  header.setBodySize((uint32_t)music.getBytes().size());
   if (!clientSocket.writeHeaderAndData(header.format().data(), music.getBytes().data(), music.getBytes().size())) {
     return; // writing to the socket failed
   }

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstddef>
+#include <cstdint>
 
 /**
  * @brief This class will handle the communication between the room and the client.
@@ -31,7 +32,7 @@ private:
      */
     std::byte options;
 
-    unsigned int bodySize;
+    uint32_t bodySize;
 
   /**
    * @brief 
@@ -43,7 +44,7 @@ private:
      * @brief This will calculate the body size from the body
      * 
      */
-    [[nodiscard]] inline unsigned int calculateBodySize() const;
+    [[nodiscard]] inline uint32_t calculateBodySize() const;
 
 public:
 
@@ -103,9 +104,9 @@ public:
   /**
    * @brief Get the Body Size object
    * 
-   * @return unsigned int
+   * @return uint32_t
    */
-  [[nodiscard]] unsigned int getBodySize() const;
+  [[nodiscard]] uint32_t getBodySize() const;
 
   /**
    * @brief Get the Body object
@@ -140,7 +141,7 @@ public:
    * 
    * @param size
    */
-  void setBodySize(unsigned int size);
+  void setBodySize(uint32_t size);
 
   /**
    * @brief This will format all the information in the message into a vector of bytes.
