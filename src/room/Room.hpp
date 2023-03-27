@@ -86,7 +86,7 @@ private:
   /**
    * Handles all stdin input
   */
-  static bool handleStdinCommands();
+  static void handleStdinCommands();
 
   /**
    * 

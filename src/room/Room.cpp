@@ -10,6 +10,7 @@
 #include <sys/select.h>
 #include <unistd.h>
 #include <thread>
+#include <unordered_map>
 
 #include "Room.hpp"
 #include "Client.hpp"
@@ -70,10 +71,13 @@ bool Room::initializeRoom() {
   FD_SET(hostSocket.getSocketFD(), &master);
   FD_SET(threadRecvPipe[0], &master);
   FD_SET(threadSendPipe[0], &master);
+  std::cout << "Successfully created a room\n";
   return true;
 }
 
 void Room::launchRoom() {
+  std::cout << " >> ";
+  std::cout.flush();
   while (true) {
     fd_set read_fds = master;  // temp file descriptor list for select()
     if (::select(fdMax + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
@@ -88,9 +92,7 @@ void Room::launchRoom() {
 
     // input from stdin, local user entered a command
     if (FD_ISSET(0, &read_fds)) { 
-      if (!handleStdinCommands()) {
-        return;
-      }
+      handleStdinCommands();
     }
 
     // data from pipe, a thread has finished receiving an audio file
@@ -111,7 +113,6 @@ void Room::launchRoom() {
         if (!handleClientRequest(*client)) {
           // connection was closed, remove the client.
           // we have to remove it from both the master list and the clients list
-          std::cout << "A client disconnected\n";
           FD_CLR(client->getSocket().getSocketFD(), &master);
           client = clients.erase(client);
         } else {
@@ -134,19 +135,80 @@ void Room::handleConnectionRequests() {
     // new fileDescriptor is greater than previous greatest, update it
     fdMax = clientSocket.getSocketFD();
   }
-  std::cout << "Client connected\n";
   // finally, add the client to both the selector list and the room list
   FD_SET(clientSocket.getSocketFD(), &master);
   this->addClient({"user", std::move(clientSocket)});
 }
 
-bool Room::handleStdinCommands() {
+enum class RoomCommand {
+  FAQ,
+  HELP,
+  EXIT,
+  ADD_SONG,
+  SEEK,
+  PLAY
+};
+
+const std::unordered_map<std::string, RoomCommand> roomCommandMap = {
+  {"faq", RoomCommand::FAQ},
+  {"help", RoomCommand::HELP},
+  {"exit", RoomCommand::EXIT},
+  {"add song", RoomCommand::ADD_SONG},
+  {"seek", RoomCommand::SEEK},
+  {"play", RoomCommand::PLAY}
+};
+
+void roomShowHelp() {
+  std::cout <<
+  "List of commands as room host:\n\n";
+}
+
+void roomShowFAQ() {
+  std::cout <<
+  "Question 1:\n\n";
+}
+
+void Room::handleStdinCommands() {
   std::string input;
   std::getline(std::cin, input);
-  if (input == "exit") {
-    return false;
+  RoomCommand command;
+  try {
+    command = roomCommandMap.at(input);
+  } catch (const std::out_of_range &err){
+    std::cout << "Invalid command. Try 'help' for information\n";
+    std::cout << " >> ";
+    std::cout.flush();
+    return;
   }
-  return true;
+
+  switch (command) {
+    case RoomCommand::FAQ:
+      roomShowFAQ();
+      break;
+
+    case RoomCommand::HELP:
+      roomShowHelp();
+      break;
+
+    case RoomCommand::EXIT:
+      exit(0);
+
+    case RoomCommand::ADD_SONG:
+      break;
+
+    case RoomCommand::PLAY:
+      break;
+
+    case RoomCommand::SEEK:
+      break;
+
+    default:
+      // this section of code should never be reached
+      std::cerr << "Error: Reached default case in Room::handleStdinCommands\nCommand " << input << " not handled but is in clientMapCommand\n";
+      exit(1);
+  }
+  std::cout << " >> ";
+  std::cout.flush();
 }
 
 void Room::processThreadFinishedReceiving() {
@@ -155,7 +217,6 @@ void Room::processThreadFinishedReceiving() {
 
   if (fdOfClientSocket < 0) { // when true, means that we need to remove that client
     fdOfClientSocket *= -1;
-    std::cout << "A client disconnected\n";
     // remove it
     clients.remove_if([fdOfClientSocket](room::Client &client){
       return client.getSocket().getSocketFD() == fdOfClientSocket;
@@ -170,7 +231,6 @@ void Room::processThreadFinishedSending() {
   ::read(threadSendPipe[0], reinterpret_cast<void *>(&fdOfClientSocket), sizeof (int));
   if (fdOfClientSocket < 0) { // when true, means that we need to remove that client
     fdOfClientSocket *= -1;
-    std::cout << "A client disconnected\n";
     // remove it
     clients.remove_if([fdOfClientSocket](room::Client &client){
       return client.getSocket().getSocketFD() == fdOfClientSocket;

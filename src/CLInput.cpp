@@ -4,7 +4,7 @@
 
 uint16_t getPort() {
   while (true) { // loop until valid number
-    std::cout << "Enter a port number\n >> ";
+    std::cout << "Enter a port number:\n >> ";
     std::string input;
     std::getline(std::cin, input);
     char *endPtr;
@@ -18,7 +18,7 @@ uint16_t getPort() {
 
 void getHost(std::string &input) {
   while (true) { // loop until some input
-    std::cout << "Enter a host\n >> ";
+    std::cout << "Enter a host:\n >> ";
     std::getline(std::cin, input);
     if (!input.empty()) {
       return;

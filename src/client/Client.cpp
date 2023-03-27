@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <utility>
 #include <sys/select.h>
+#include <unordered_map>
 
 #include "Client.hpp"
 #include "../CLInput.hpp"
@@ -35,10 +36,13 @@ bool Client::initializeClient() {
   FD_ZERO(&master);
   FD_SET(0, &master);
   FD_SET(clientSocket.getSocketFD(), &master);
+  std::cout << "Successfully joined the room\n";
   return true;
 }
 
 void Client::handleClient() {
+  std::cout << " >> ";
+  std::cout.flush();
   while (true) {
     fd_set read_fds = master;  // temp file descriptor list for select()
     if (::select(fdMax + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
@@ -54,30 +58,98 @@ void Client::handleClient() {
 
     // input from stdin, local user entered a command
     if (FD_ISSET(0, &read_fds)) { 
-      if (!handleStdinCommand()) {
-        return;
-      }
+      handleStdinCommand();
     }
   }
 }
 
+enum class ClientCommand {
+  FAQ,
+  HELP,
+  EXIT,
+  ADD_SONG,
+  SEEK,
+  PLAY
+};
+
+const std::unordered_map<std::string, ClientCommand> clientCommandMap = {
+  {"faq", ClientCommand::FAQ},
+  {"help", ClientCommand::HELP},
+  {"exit", ClientCommand::EXIT},
+  {"add song", ClientCommand::ADD_SONG},
+  {"seek", ClientCommand::SEEK},
+  {"play", ClientCommand::PLAY}
+};
+
+// TODO:
+void clientShowHelp() {
+  std::cout <<
+  "List of commands as client:\n\n";
+}
+
+void clientShowFAQ() {
+  std::cout <<
+  "Question 1:\n\n";
+}
+
 bool Client::handleStdinCommand() {
-  // handle command line input here
   std::string input;
   std::getline(std::cin, input);
-  if (input == "exit") {
-    audioPlayer.pause();
-    return false;
-  } else if (input == "send song") {
-    sendMusicFile();
-  } else if (input == "play") {
-    FILE *fp = queue.getFront();
-    if (fp != nullptr) {
-      audioPlayer.feed(fp);
-      audioPlayer.play();
-      queue.removeFront();
-    }
+  ClientCommand command;
+  try {
+    command = clientCommandMap.at(input);
+  } catch (const std::out_of_range &err){
+    std::cout << "Invalid command. Try 'help' for information\n";
+    std::cout << " >> ";
+    std::cout.flush();
+    return true;
   }
+
+  switch (command) {
+    case ClientCommand::FAQ:
+      clientShowFAQ();
+      break;
+
+    case ClientCommand::HELP:
+      clientShowHelp();
+      break;
+
+    case ClientCommand::EXIT:
+      exit(0);
+
+    case ClientCommand::ADD_SONG:
+      sendMusicFile();
+      break;
+
+    case ClientCommand::PLAY: {
+      FILE *fp = queue.getFront();
+      if (fp != nullptr) {
+        audioPlayer.feed(fp);
+        audioPlayer.play();
+        queue.removeFront();
+      }
+      break;
+    }
+
+    case ClientCommand::SEEK: {
+      std::cout << "Enter a time to seek to:\n >> ";
+      std::string input;
+      std::getline(std::cin, input);
+      char *endPtr;
+      const auto time = strtof(input.c_str(), &endPtr);
+      if (*endPtr == '\0') {
+        audioPlayer.seek(time);
+      }
+      break;
+    }
+
+    default:
+      // this section of code should never be reached
+      std::cerr << "Error: Reached default case in Client::handleStdinCommand\nCommand " << input << " not handled but is in clientMapCommand\n";
+      exit(1);
+  }
+  std::cout << " >> ";
+  std::cout.flush();
   return true;
 }
 
@@ -118,13 +190,12 @@ void Client::sendMusicFile() {
 
   {
     // create request message
-    Message message;
-    message.setCommand((std::byte)Commands::Command::REQ_ADD_TO_QUEUE);
-    auto formattedRequest = message.format();
+    Message request;
+    request.setCommand((std::byte)Commands::Command::REQ_ADD_TO_QUEUE);
+    auto formattedRequest = request.format();
     if (!clientSocket.write(formattedRequest.data(), formattedRequest.size())) {
       return; // writing to the socket failed
     }
-    std::cout << "Sent queue song request to server\n";
   }
 
   {
@@ -144,7 +215,7 @@ void Client::sendMusicFile() {
   Music music; // create music object
   std::string input;
   while (true) {
-    std::cout << "Enter file path\n >> ";
+    std::cout << "Enter file path:\n >> ";
     std::getline(std::cin, input);
     music.setPath(input);
     if (music.readFileAtPath()) {

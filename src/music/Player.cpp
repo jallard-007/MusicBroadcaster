@@ -65,10 +65,6 @@ void Player::wait() {
 
 void Player::seek(float time) {
   const auto offset = static_cast<off_t>(time * MP3_FRAMES_PER_SEC);
-  if (offset > mpg123_tellframe(mh)) {
-    // need to find way to go back
-    return;
-  }
   if (mpg123_seek_frame(mh, offset, SEEK_SET) < 0) {
     mpg123_strerror(mh);
   }

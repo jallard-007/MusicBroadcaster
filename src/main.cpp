@@ -15,20 +15,35 @@
 void showHelp() {
   std::cout <<
   "List of commands:\n\n"
-  "\t\'make room\'\t| will prompt for port and IP/host to listen on. Plays audio received from a client.\n\n"
-  "\t\'join room\'\t| Will prompt for port and IP/host to join to. A room must be listening at the specified port and host. "
-  "If connection is successful, will prompt for name of audio, and path to audio file (must be mp3 format).\n\n";
+  "'faq'       | Answers to frequently asked questions\n\n"
+  "'help'      | List commands and what they do.\n\n"
+  "'exit'      | Exit the program.\n\n"
+  "'make room' | Make a room. Will prompt for port and IP/host to listen on.\n\n"
+  "'join room' | Join a room. Will prompt for port and IP/host to join.\n\n";
+}
+
+void showFAQ() {
+  std::cout <<
+  "What does this program do?\n"
+  "  This program allows you to share and listen to music with your friends, from anywhere in the world.\n\n"
+  "How do I use this program?\n"
+  "  Start by having one person make a room using the 'make room' command.\n"
+  "  Then have all your friends join by using the 'join room' command.\n"
+  "  After successfully making/joining a room, use the 'faq' command again for further information\n\n"
+  ;
 }
 
 /**
  * Enum class of commands, which we support.
  * These should have a string mapping in `commandMap` below
+ * FAQ, HELP, and EXIT should be available in all sections
 */
 enum class Command {
-  MAKE_ROOM,
-  JOIN_ROOM,
+  FAQ,
   HELP,
-  EXIT
+  EXIT,
+  MAKE_ROOM,
+  JOIN_ROOM
 };
 
 /**
@@ -36,11 +51,12 @@ enum class Command {
  * Allows us to use a switch statement rather than a bunch of if else statements
  * Example: "make room" inputted on the command line maps to Command::MAKE_ROOM, which is handled in the switch in main
  */
-static const std::unordered_map<std::string, Command> commandMap = {
-  {"make room", Command::MAKE_ROOM},
-  {"join room", Command::JOIN_ROOM},
+const std::unordered_map<std::string, Command> commandMap = {
+  {"faq", Command::FAQ},
   {"help", Command::HELP},
-  {"exit", Command::EXIT}
+  {"exit", Command::EXIT},
+  {"make room", Command::MAKE_ROOM},
+  {"join room", Command::JOIN_ROOM}
 };
 
 int main() {
@@ -52,20 +68,32 @@ int main() {
     try {
       command = commandMap.at(input);
     } catch (const std::out_of_range &err){
-      std::cout << "Invalid command. Try 'help' for information\n";
+      std::cout << "Invalid command. Try 'help' for a list of commands\n";
       continue;
     }
 
     // handle all possible commands in this switch
     switch (command) {
 
-      case Command::EXIT:
-        return 0;
+      case Command::FAQ:
+        showFAQ();
+        break;
 
       case Command::HELP: 
-        // show help information, such as list of commands, how to use the application...
         showHelp();
         break;
+
+      case Command::EXIT:
+        return 0;
+      
+      case Command::MAKE_ROOM: {
+        // "make room" command was entered, so now we treat this user as a client who wants to make a room
+        Room room;
+        if (room.initializeRoom()) {
+          room.launchRoom();
+        }
+        break;
+      }
 
       case Command::JOIN_ROOM: {
         // "join room" command was entered, so now we treat this user as a client who wants to join a room
@@ -76,18 +104,9 @@ int main() {
         break;
       }
 
-      case Command::MAKE_ROOM: {
-        // "make room" command was entered, so now we treat this user as a client who wants to make a room
-        Room room;
-        if (room.initializeRoom()) {
-          room.launchRoom();
-        }
-        break;
-      }
-
       default:
         // this section of code should never be reached
-        std::cerr << "Error: Reached default case in main method.\nCommand " << input << " not handled but is in mapCommand\n";
+        std::cerr << "Error: Reached default case in main\nCommand " << input << " not handled but is in mapCommand\n";
         exit(1);
     }
   }
