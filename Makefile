@@ -11,7 +11,7 @@ default:
 	mkdir -p $(OBJ_DIR)
 	make all
 
-all: obj/main.o obj/CLInput.o obj/clientClient.o obj/Message.o obj/Commands.o obj/Music.o obj/MusicStorage.o obj/Player.o obj/serverClient.o obj/Room.o obj/BaseSocket.o obj/ThreadSafeSocket.o
+all: obj/main.o obj/CLInput.o obj/clientClient.o obj/Message.o obj/Music.o obj/MusicStorage.o obj/Player.o obj/serverClient.o obj/Room.o obj/BaseSocket.o obj/ThreadSafeSocket.o
 	$(GXX) $(GXXFLAGS) $^ -o main -lao -lmpg123
 
 # src/main.cpp
@@ -28,9 +28,6 @@ obj/clientClient.o: src/client/Client.cpp src/client/Client.hpp
 
 # src/messaging
 obj/Message.o: src/messaging/Message.cpp src/messaging/Message.hpp
-	$(GXX) $(GXXFLAGS) -c $< -o $@
-
-obj/Commands.o: src/messaging/Commands.cpp src/messaging/Commands.hpp
 	$(GXX) $(GXXFLAGS) -c $< -o $@
 
 # src/music

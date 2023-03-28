@@ -13,7 +13,7 @@
 
 #include "Client.hpp"
 #include "../CLInput.hpp"
-#include "../messaging/Commands.hpp"
+#include "../messaging/Message.hpp"
 
 Client::Client():
   id{}, fdMax{}, clientName{},
@@ -69,7 +69,6 @@ enum class ClientCommand {
   EXIT,
   ADD_SONG,
   SEEK,
-  PLAY
 };
 
 const std::unordered_map<std::string, ClientCommand> clientCommandMap = {
@@ -78,7 +77,6 @@ const std::unordered_map<std::string, ClientCommand> clientCommandMap = {
   {"exit", ClientCommand::EXIT},
   {"add song", ClientCommand::ADD_SONG},
   {"seek", ClientCommand::SEEK},
-  {"play", ClientCommand::PLAY}
 };
 
 // TODO:
@@ -121,16 +119,6 @@ bool Client::handleStdinCommand() {
       sendMusicFile();
       break;
 
-    case ClientCommand::PLAY: {
-      FILE *fp = queue.getFront();
-      if (fp != nullptr) {
-        audioPlayer.feed(fp);
-        audioPlayer.play();
-        queue.removeFront();
-      }
-      break;
-    }
-
     case ClientCommand::SEEK: {
       std::cout << "Enter a time to seek to:\n >> ";
       std::string input;
@@ -162,20 +150,45 @@ bool Client::handleServerMessage() {
   }
   Message mes(responseHeader);
   const uint32_t size = mes.getBodySize();
-  auto command = static_cast<Commands::Command>(mes.getCommand());
+  auto command = static_cast<const Commands::Command>(mes.getCommand());
   switch (command) {
     case Commands::Command::SONG_DATA: {
-      FILE *fp = queue.add();
+      auto filePath = queue.add();
+      if (filePath == nullptr) {
+        // we got a problem
+        return false;
+      }
       Music music;
-      music.getBytes().resize(size);
-      if (clientSocket.readAll(music.getBytes().data(), size) == 0) {
+      music.getVector().resize(size);
+      // will want to eventually thread this off
+      if (clientSocket.readAll(music.getVector().data(), size) == 0) {
         audioPlayer.pause();
         std::cout << "lost connection to room\n";
         return false;
       }
-      music.writeToFile(fp);
+
+      { // send received ok response to server
+        Message response;
+        response.setCommand((std::byte)Commands::Command::RECV_OK);
+        clientSocket.write(response.data(), response.size());
+      }
+
+      // write the data to disk
+      music.setPath(filePath->c_str());
+      music.writeToPath();
       break;
     }
+    
+    case Commands::Command::PLAY: {
+      // TODO: need to check if there was a previous song that finished then remove it from the queue
+     auto fd = queue.getFront();
+      if (fd != nullptr) {
+        audioPlayer.feed(fd->c_str());
+        audioPlayer.play();
+      }
+      break;
+    }
+
     default:
       break;
   }
@@ -192,8 +205,7 @@ void Client::sendMusicFile() {
     // create request message
     Message request;
     request.setCommand((std::byte)Commands::Command::REQ_ADD_TO_QUEUE);
-    auto formattedRequest = request.format();
-    if (!clientSocket.write(formattedRequest.data(), formattedRequest.size())) {
+    if (!clientSocket.write(request.data(), request.size())) {
       return; // writing to the socket failed
     }
   }
@@ -224,11 +236,10 @@ void Client::sendMusicFile() {
   }
   Message header;
   header.setCommand((std::byte)Commands::Command::SONG_DATA);
-  header.setBodySize((uint32_t)music.getBytes().size());
-  if (!clientSocket.writeHeaderAndData(header.format().data(), music.getBytes().data(), music.getBytes().size())) {
+  header.setBodySize((uint32_t)music.getVector().size());
+  if (!clientSocket.writeHeaderAndData(header.data(), music.getVector().data(), music.getVector().size())) {
     return; // writing to the socket failed
   }
-  std::cout << "Sent file contents to server\n";
 }
 
 const std::string &Client::getName() const  {

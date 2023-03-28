@@ -8,6 +8,7 @@
 
 #include <list>
 #include <memory>
+#include <string>
 
 #include "Music.hpp"
 
@@ -22,7 +23,7 @@ private:
   /**
    * we dont need the music objects to be next to each other, so use a list
   */
-  std::list<FILE *> songs;
+  std::list<std::string> songs;
 
 public:
   MusicStorage();
@@ -31,15 +32,15 @@ public:
   /**
    * Removes a music object by its address in memory
   */
-  void removeByAddress(FILE *);
+  void removeByAddress(const std::string *);
 
   /**
    * Add an unnamed Music object to the back of the list
    * @returns pointer to the new Music object, nullptr if no room
   */
-  FILE *add();
+  const std::string *add();
 
-  [[nodiscard]] FILE *getFront();
+  [[nodiscard]] const std::string *getFront();
   [[nodiscard]] std::shared_ptr<Music> getFrontMem();
 
   void removeFront();

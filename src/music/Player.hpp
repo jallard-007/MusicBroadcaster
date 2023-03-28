@@ -59,9 +59,9 @@ public:
 
   /**
    * feed audio data to mpg123
-   * @param fp pointer to FILE containing audio data
+   * @param fp 
   */
-  void feed(FILE *fp);
+  void feed(const char *fp);
 
   /**
    * plays audio which as been fed to mpg123
@@ -81,6 +81,8 @@ public:
   void seek(float time);
 
   void clear();
+
+  bool isPlaying();
 
 private:
   void _play();

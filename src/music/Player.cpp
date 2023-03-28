@@ -26,8 +26,8 @@ Player::~Player() {
   free(outBuffer);
 }
 
-void Player::feed(FILE *fp) {
-  mpg123_open_fd(mh, fileno(fp));
+void Player::feed(const char *fp) {
+  mpg123_open(mh, fp);
 }
 
 void Player::_newFormat() {
@@ -43,11 +43,9 @@ void Player::_newFormat() {
 
 void Player::play() {
   if (shouldPlay) {
-    std::cerr << "Already playing\n";
     return;
   }
   wait();
-  std::cout << "Playing...\n";
   shouldPlay = true;
   player = std::thread(&Player::_play, this);
 }
@@ -61,6 +59,10 @@ void Player::wait() {
   if (player.joinable()) {
     player.join();
   }
+}
+
+bool Player::isPlaying() {
+  return shouldPlay;
 }
 
 void Player::seek(float time) {
@@ -82,10 +84,10 @@ void Player::_play() {
     if (err == MPG123_NEW_FORMAT) {
       // new format as been detected, handle it
       _newFormat();
-    } else if (err == MPG123_NEED_MORE) {
-      // this means that there is no more audio to read, feed it the next song!
+    } else if (err == MPG123_DONE) {
       shouldPlay = false;
     } else if (err != MPG123_OK) {
+      std::cout << "err: " << mpg123_strerror(mh) << '\n';
       // some error
       shouldPlay = false;
     }

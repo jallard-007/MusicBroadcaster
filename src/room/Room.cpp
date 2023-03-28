@@ -15,13 +15,13 @@
 #include "Room.hpp"
 #include "Client.hpp"
 #include "../CLInput.hpp"
+#include "../messaging/Message.hpp"
 
 using namespace Commands;
 
-Room::Room(): ip{0}, fdMax{0}, hostSocket{0},
-  threadRecvPipe{0}, threadSendPipe{0},
-  queueMutex{}, name{"unnamed"},
-  clients{}, queue{}, master{} {}
+Room::Room(): ip{}, fdMax{}, numClientsReceivedFile{}, hostSocket{},
+  threadRecvPipe{}, threadSendPipe{}, threadWaitAudioPipe{}, name{},
+  clients{}, queue{}, audioPlayer{}, queueMutex{}, master{} {}
 
 Room::~Room() {
   if (threadRecvPipe[0] != 0) {
@@ -35,6 +35,12 @@ Room::~Room() {
   }
   if (threadSendPipe[1] != 0) {
     close(threadSendPipe[1]);
+  }
+  if (threadWaitAudioPipe[0] != 0) {
+    close(threadWaitAudioPipe[0]);
+  }
+  if (threadWaitAudioPipe[1] != 0) {
+    close(threadWaitAudioPipe[1]);
   }
 }
 
@@ -58,11 +64,16 @@ bool Room::initializeRoom() {
     fprintf(stderr, "pipe: %s (%d)\n", strerror(errno), errno);
     return false;
   }
+  if (::pipe(threadWaitAudioPipe) == -1) {
+    fprintf(stderr, "pipe: %s (%d)\n", strerror(errno), errno);
+    return false;
+  }
 
   // set initial max file descriptor for selector
   fdMax = hostSocket.getSocketFD();
   fdMax = fdMax > threadRecvPipe[0] ? fdMax : threadRecvPipe[0];
   fdMax = fdMax > threadSendPipe[0] ? fdMax : threadSendPipe[0];
+  fdMax = fdMax > threadWaitAudioPipe[0] ? fdMax : threadWaitAudioPipe[0];
 
   // clear the master sets
   FD_ZERO(&master);
@@ -71,6 +82,7 @@ bool Room::initializeRoom() {
   FD_SET(hostSocket.getSocketFD(), &master);
   FD_SET(threadRecvPipe[0], &master);
   FD_SET(threadSendPipe[0], &master);
+  FD_SET(threadWaitAudioPipe[0], &master);
   std::cout << "Successfully created a room\n";
   return true;
 }
@@ -103,6 +115,13 @@ void Room::launchRoom() {
     // data from pipe, a thread as finished sending an audio file
     if (FD_ISSET(threadSendPipe[0], &read_fds)) {
       processThreadFinishedSending();
+    }
+
+    if (FD_ISSET(threadWaitAudioPipe[0], &read_fds)) {
+      int x;
+      ::read(threadWaitAudioPipe[0], reinterpret_cast<void *>(&x), sizeof (int));
+      queue.removeFront();
+      attemptPlayNext();
     }
 
     // loop through all clients to see if they sent something
@@ -238,7 +257,36 @@ void Room::processThreadFinishedSending() {
   } else { // other wise its all good, continue
     // add the client's socket FD back to select
     FD_SET(fdOfClientSocket, &master);
+    ++numClientsReceivedFile;
+    attemptPlayNext();
   }
+}
+
+void Room::waitOnAudio() {
+  audioPlayer.wait();
+  int nothing;
+  write(threadWaitAudioPipe[1], &nothing, sizeof nothing);
+}
+
+void Room::attemptPlayNext() {
+  if (audioPlayer.isPlaying()) {
+    return;
+  }
+
+  auto fp = queue.getFront();
+  if (fp == nullptr) {
+    return;
+  }
+  audioPlayer.feed(fp->c_str());
+  audioPlayer.play();
+  for (room::Client &client : clients) {
+    Message message;
+    message.setCommand(Command::PLAY);
+    // might want to thread this off, similar to sendSongDataToClient
+    client.getSocket().write(message.data(), message.size());
+  }
+  std::thread threadAudioWait = std::thread(&Room::waitOnAudio, this);
+  threadAudioWait.detach();
 }
 
 bool Room::handleClientRequest(room::Client &client) {
@@ -272,13 +320,36 @@ bool Room::handleClientRequest(room::Client &client) {
 }
 
 void Room::sendSongDataToClient(std::shared_ptr<Music> audio, room::Client &client) {
-  Message message;
-  message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
-  message.setBodySize(static_cast<uint32_t>(audio.get()->getBytes().size()));
   int socketFD = client.getSocket().getSocketFD();
-  if (!client.getSocket().writeHeaderAndData(message.format().data(), audio.get()->getBytes().data(), audio.get()->getBytes().size())) {
-    socketFD *= -1;
-  }
+
+  auto process = [&socketFD, &client, &audio]() {
+    ThreadSafeSocket &clientSocket = client.getSocket();
+    { // send file to client
+      const auto &audioData = audio.get()->getVector();
+      Message message;
+      message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
+      message.setBodySize(static_cast<uint32_t>(audioData.size()));
+      if (!clientSocket.writeHeaderAndData(message.data(), audioData.data(), audioData.size())) {
+        socketFD *= -1;
+        return;
+      }
+    }
+    { // wait for ok response from client
+      std::byte responseHeader[SIZE_OF_HEADER];
+      ::memset(responseHeader, 0, sizeof responseHeader);
+      if (clientSocket.readAll(responseHeader, sizeof responseHeader) == 0) {
+        socketFD *= -1;
+        return;
+      }
+      Message message(responseHeader);
+      if (static_cast<Command>(message.getCommand()) != Command::RECV_OK) {
+        socketFD *= -1;
+        return;
+      }
+    }
+  };
+
+  process();
   ::write(threadSendPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
 }
 
@@ -302,7 +373,7 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
     // wait till we acquire the lock
     std::unique_lock<std::mutex> lock{queueMutex};
     // add a Music object into the queue
-    FILE *queueEntry = queue.add();
+    auto queueEntry = queue.add();
 
     if (queueEntry == nullptr) {
       // adding to queue was unsuccessful
@@ -330,10 +401,9 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
     // get size of message from message object
     const uint32_t sizeOfFile = message.getBodySize();
     Music music;
-    music.getBytes().resize(sizeOfFile); 
+    music.getVector().resize(sizeOfFile); 
 
-    std::byte *dataPointer = music.getBytes().data();
-
+    std::byte *dataPointer = music.getVector().data();
     const auto numBytesRead = static_cast<uint32_t>(socket.readAll(dataPointer, sizeOfFile));
     if (numBytesRead <= 0) {
       // either client disconnected half way through, or some other error. Scrap it
@@ -341,7 +411,8 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
       // make FD negative to tell parent thread we need to remove the client
       socketFD *= -1;
     }
-    music.writeToFile(queueEntry);
+    music.setPath(queueEntry->c_str());
+    music.writeToPath();
   };
 
   process();
@@ -351,10 +422,9 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
 }
 
 void Room::sendBasicResponse(ThreadSafeSocket& socket, Command response) {
-  std::byte responseHeader[6];
-  ::memset(responseHeader, 0, sizeof responseHeader);
-  responseHeader[0] = static_cast<std::byte>(response);
-  socket.write(responseHeader, sizeof responseHeader);
+  Message message;
+  message.setCommand(static_cast<std::byte>(response));
+  socket.write(message.getMessage().data(), message.getMessage().size());
 }
 
 void Room::setIp(int newIp) {

@@ -20,7 +20,7 @@ public:
   Music() = default;
   ~Music() = default;
   
-  explicit Music(std::string );
+  explicit Music(std::string);
 
   /**
    * Used to create an instance with a local file
@@ -42,19 +42,17 @@ public:
    * Attemps to read the file at Music::path and store the contents in Music::bytes
    * @returns true on success, false otherwise
   */
-  bool readFileAtPtr(FILE *);
 
-  void writeToFile(FILE *);
+  void writeToPath();
   /**
    * Setters and getters
   */
  
   [[nodiscard]] const std::string &getName() const;
   [[nodiscard]] const std::string &getPath() const;
-  [[nodiscard]] std::vector<std::byte> &getBytes();
+  [[nodiscard]] std::vector<std::byte> &getVector();
   void setPath(const std::string &);
-  void setBytes(const std::vector<std::byte>&);
-  void appendBytes(const std::vector<std::byte>&);
+  void setVector(const std::vector<std::byte>&);
   
 };
 

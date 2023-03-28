@@ -5,6 +5,14 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Commands.hpp"
+
+#define INDEX_COMMAND 0
+#define INDEX_OPTION 1
+#define INDEX_START_SIZE 2
+#define INDEX_END_SIZE 6
+#define SIZE_OF_HEADER 6
+
 /**
  * @brief This class will handle the communication between the room and the client.
  * Looking at the protocol, the message is made up of 4 parts:
@@ -19,32 +27,11 @@
 class Message {
 
 private:
-
-  /**
-   * @brief This is the command that the room will use to determine what to do.
-   * 
-   */
-    std::byte command;
-
     /**
-     * @brief This is the options that tells the room what to do with the command. 
+     *
      * 
      */
-    std::byte options;
-
-    uint32_t bodySize;
-
-  /**
-   * @brief 
-   * 
-   */
-    std::vector<std::byte> body;
-
-    /**
-     * @brief This will calculate the body size from the body
-     * 
-     */
-    [[nodiscard]] inline uint32_t calculateBodySize() const;
+    std::vector<std::byte> contents;
 
 public:
 
@@ -65,7 +52,7 @@ public:
    * 
    * @param message This a message in binary data
    */
-  explicit Message(const std::vector<std::byte>& message);
+  explicit Message(std::vector<std::byte> &&message);
 
   /**
    * @brief Destroy the Message object
@@ -86,6 +73,10 @@ public:
    * @param other 
    */
   Message(Message&& other) = default;
+
+  size_t size();
+
+  const std::byte *data();
   
   /**
    * @brief Get the Command object
@@ -109,18 +100,18 @@ public:
   [[nodiscard]] uint32_t getBodySize() const;
 
   /**
-   * @brief Get the Body object
-   * 
-   * @return const std::vector<std::byte>& 
-   */
-  [[nodiscard]] const std::vector<std::byte>& getBody() const;
-
-  /**
    * @brief Set the Command object
    * 
    * @param byte
    */
   void setCommand(std::byte byte);
+
+  /**
+   * @brief Set the Command object
+   * 
+   * @param command
+   */
+  void setCommand(Commands::Command command);
 
   /**
    * @brief Set the Options object
@@ -144,11 +135,9 @@ public:
   void setBodySize(uint32_t size);
 
   /**
-   * @brief This will format all the information in the message into a vector of bytes.
-   * 
    * @return const std::vector<std::byte> 
    */
-  [[nodiscard]] std::vector<std::byte> format() const;
+  [[nodiscard]] const std::vector<std::byte> &getMessage();
 
 };
 

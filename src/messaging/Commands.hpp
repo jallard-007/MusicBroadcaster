@@ -1,6 +1,7 @@
-#pragma once
+#ifndef COMMANDS_H
+#define COMMANDS_H
 
-#include "Message.hpp"
+
 
 namespace Commands {
 
@@ -25,11 +26,27 @@ enum class Command : std::underlying_type_t<std::byte> {
                       /* example: REQ_ADD_TO_QUEUE <options byte> <4 bytes size of whole audio file> */
 
     /* message contains song data
-    should only be sent if received an ok after REQ_ADD_TO_QUEUE
-    example: SONG_DATA <option byte> <4 bytes size of body> <body> */
+     * should only be sent if received an ok after REQ_ADD_TO_QUEUE
+     * example: SONG_DATA <option byte> <4 bytes size of body> <body>
+     * can also be sent by room to a client at anytime
+    */
     SONG_DATA,
+
+    /**
+     * play the next song in queue, sent from server to clients
+    */
+    PLAY,
+
+    /**
+     * confirmation by server
+    */
     RES_OK,
     RES_NOT_OK,
+
+    /**
+     * response by client to room saying received all song data
+    */
+    RECV_OK,
 
     GOOD_MSG, /* Says the return was good */
     BAD_FORMAT, /* Says the format was bad */
@@ -41,33 +58,6 @@ enum class Command : std::underlying_type_t<std::byte> {
 /* They will start with the command name then the option */
 #define JOIN_NAME (std::byte)1 /* With this option, a name should be in the body as a null terminated string */
 
-
-    /**
-     * @brief Reads if a message was good
-     * 
-     * @param msg The returned message 
-     * @return true If the returned message was good
-     * @return false The message is therefore bad
-     */
-    inline bool good(const Message& msg);
-
-    /**
-     * @brief Read if the message was formatted badly. Needs the return message
-     * 
-     * @param msg The returned message
-     * @return true If the message the was recently sent was badly formatted
-     * @return false The message format was okay
-     */
-    inline bool bad_format(const Message& msg);
-
-    /**
-     * @brief Reads the returned message to tell if the values in the message were bad
-     * 
-     * @param msg The returned message
-     * @return true If the values are bad
-     * @return false Then the values given in the recent message are good
-     */
-    inline bool bad_values(const Message& msg);
-
 }
 
+#endif

@@ -13,6 +13,7 @@
 #include "Client.hpp"
 #include "../socket/BaseSocket.hpp"
 #include "../music/MusicStorage.hpp"
+#include "../music/Player.hpp"
 #include "../messaging/Commands.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
@@ -28,6 +29,11 @@ private:
    * keep track of the biggest file descriptor for select
   */
   int fdMax;
+
+  /**
+   * number of clients that have fully received the current song
+  */
+  uint32_t numClientsReceivedFile;
 
   /**
    * Socket in which connections are established
@@ -47,9 +53,9 @@ private:
   int threadSendPipe[2];
 
   /**
-   * mutex for queue
+   * 
   */
-  mutable std::mutex queueMutex;
+  int threadWaitAudioPipe[2];
 
   /**
    * name of the room, also not being used
@@ -65,6 +71,16 @@ private:
    * queue of music
   */
   MusicStorage queue;
+
+  /**
+   * plays audio
+  */
+  Player audioPlayer;
+
+  /**
+   * mutex for queue
+  */
+  mutable std::mutex queueMutex;
 
   /**
    * master file descriptor list
@@ -114,6 +130,9 @@ private:
   */
   void attemptAddSongToQueue(room::Client *clientPtr);
 
+  void waitOnAudio();
+
+  void attemptPlayNext();
 
   /**
    * Sends a header only response to the client

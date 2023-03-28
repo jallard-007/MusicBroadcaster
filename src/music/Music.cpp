@@ -7,6 +7,7 @@
 #include <fstream>
 #include <utility>
 #include <vector>
+#include <unistd.h>
 #include "Music.hpp"
 
 Music::Music(std::string songName):
@@ -30,7 +31,7 @@ const std::string &Music::getPath() const {
   return path;
 }
 
-std::vector<std::byte> &Music::getBytes() {
+std::vector<std::byte> &Music::getVector() {
   return bytes;
 }
 
@@ -38,21 +39,12 @@ void Music::setPath(const std::string &newPath) {
   path = newPath;
 }
 
-void Music::setBytes(const std::vector<std::byte> &musicBytes) {
+void Music::setVector(const std::vector<std::byte> &musicBytes) {
   bytes = musicBytes;
-}
-
-void Music::appendBytes(const std::vector<std::byte> &musicBytes) {
-  bytes.insert(bytes.end(), musicBytes.begin(), musicBytes.end());
 }
 
 bool Music::readFileAtPath() {
   FILE *fp = fopen(path.c_str(), "r");
-  return readFileAtPtr(fp);
-  fclose(fp);
-}
-
-bool Music::readFileAtPtr(FILE *fp) {
   if (fp == nullptr) {
     std::cerr << "Error: Unable to open file\n";
     return false;
@@ -67,11 +59,17 @@ bool Music::readFileAtPtr(FILE *fp) {
   bytes.resize(fileSize); // allocate memory to fit the file
   
   fseek(fp, 0L, SEEK_SET); // reset position to beginning of file
-  fread((void *)bytes.data(), (size_t)fileSize, 1, fp); // read the file
-
+  fread((void *)bytes.data(), bytes.size(), 1, fp); // read the file
+  fclose(fp);
   return true;
 }
 
-void Music::writeToFile(FILE *fp) {
-  fwrite(bytes.data(), 1, bytes.size(), fp);
+
+void Music::writeToPath() {
+  FILE *fp = fopen(path.c_str(), "w");
+  if (fp == nullptr) {
+    return;
+  }
+  fwrite(bytes.data(), bytes.size(), 1, fp);
+  fclose(fp);
 }
