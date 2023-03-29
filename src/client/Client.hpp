@@ -14,6 +14,7 @@
 
 class Client {
 private:
+  bool shouldRemoveFirstOnNext;
   int id;
   int fdMax;
   std::string clientName;

@@ -281,7 +281,7 @@ void Room::attemptPlayNext() {
   audioPlayer.play();
   for (room::Client &client : clients) {
     Message message;
-    message.setCommand(Command::PLAY);
+    message.setCommand(Command::PLAY_NEXT);
     // might want to thread this off, similar to sendSongDataToClient
     client.getSocket().write(message.data(), message.size());
   }

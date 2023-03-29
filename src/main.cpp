@@ -1,6 +1,7 @@
 /**
  * @author Justin Nicolas Allard
  * Start of execution, main function
+ * local ip: ipconfig getifaddr en0
 */
 
 #include <iostream>

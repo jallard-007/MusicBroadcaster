@@ -35,7 +35,7 @@ enum class Command : std::underlying_type_t<std::byte> {
     /**
      * play the next song in queue, sent from server to clients
     */
-    PLAY,
+    PLAY_NEXT,
 
     /**
      * confirmation by server

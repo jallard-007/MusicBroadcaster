@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cstddef>
 #include <utility>
+#include <unistd.h>
 #include <sys/select.h>
 #include <unordered_map>
 
@@ -16,11 +17,11 @@
 #include "../messaging/Message.hpp"
 
 Client::Client():
-  id{}, fdMax{}, clientName{},
+  shouldRemoveFirstOnNext{false}, id{}, fdMax{}, clientName{},
   clientSocket{}, queue{}, audioPlayer{}, master{} {}
 
 Client::Client(std::string name):
-  id{}, fdMax{}, clientName{std::move(name)},
+  shouldRemoveFirstOnNext{false}, id{}, fdMax{}, clientName{std::move(name)},
   clientSocket{}, queue{}, audioPlayer{}, master{} {}
 
 bool Client::initializeClient() {
@@ -120,14 +121,14 @@ bool Client::handleStdinCommand() {
       break;
 
     case ClientCommand::SEEK: {
-      std::cout << "Enter a time to seek to:\n >> ";
-      std::string input;
-      std::getline(std::cin, input);
-      char *endPtr;
-      const auto time = strtof(input.c_str(), &endPtr);
-      if (*endPtr == '\0') {
-        audioPlayer.seek(time);
-      }
+      // std::cout << "Enter a time to seek to:\n >> ";
+      // std::string input;
+      // std::getline(std::cin, input);
+      // char *endPtr;
+      // const auto time = strtof(input.c_str(), &endPtr);
+      // if (*endPtr == '\0') {
+      //   audioPlayer.seek(time);
+      // }
       break;
     }
 
@@ -153,11 +154,6 @@ bool Client::handleServerMessage() {
   const auto command = static_cast<Commands::Command>(mes.getCommand());
   switch (command) {
     case Commands::Command::SONG_DATA: {
-      auto filePath = queue.add();
-      if (filePath == nullptr) {
-        // we got a problem
-        return false;
-      }
       Music music;
       music.getVector().resize(size);
       // will want to eventually thread this off
@@ -173,18 +169,30 @@ bool Client::handleServerMessage() {
         clientSocket.write(response.data(), response.size());
       }
 
+      auto filePath = queue.add();
       // write the data to disk
-      music.setPath(filePath->c_str());
-      music.writeToPath();
+      if (filePath != nullptr) {
+        music.setPath(filePath->c_str());
+        music.writeToPath();
+      } else {
+        // we got a problem
+      }
       break;
     }
     
-    case Commands::Command::PLAY: {
+    case Commands::Command::PLAY_NEXT: {
+      if (shouldRemoveFirstOnNext) {
+        queue.removeFront();
+      }
       // TODO: need to check if there was a previous song that finished then remove it from the queue
-     auto fd = queue.getFront();
-      if (fd != nullptr) {
-        audioPlayer.feed(fd->c_str());
+      auto nextSongFileName = queue.getFront();
+
+      if (nextSongFileName != nullptr) {
+        audioPlayer.feed(nextSongFileName->c_str());
         audioPlayer.play();
+        shouldRemoveFirstOnNext = true;
+      } else {
+        shouldRemoveFirstOnNext = false;
       }
       break;
     }
