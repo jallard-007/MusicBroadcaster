@@ -20,6 +20,8 @@ Player::Player(): shouldPlay{false}, dev{nullptr}, player{} {
 }
 
 Player::~Player() {
+  shouldPlay = false;
+  wait();
   ao_close(dev);
   mpg123_delete(mh);
   ao_shutdown();
@@ -27,8 +29,7 @@ Player::~Player() {
 }
 
 void Player::feed(const char *fp) {
-  shouldPlay = false;
-  wait();
+  pause();
   mpg123_open(mh, fp);
 }
 
@@ -72,11 +73,6 @@ void Player::seek(float time) {
   if (mpg123_seek_frame(mh, offset, SEEK_SET) < 0) {
     mpg123_strerror(mh);
   }
-}
-
-void Player::clear() {
-  shouldPlay = false;
-  wait();
 }
 
 void Player::_play() {

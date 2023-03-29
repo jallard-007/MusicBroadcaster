@@ -21,7 +21,7 @@ class MusicStorageEntry {
 public:
   std::string path;
   int fd;
-  MusicStorageEntry() = delete;
+  MusicStorageEntry();
   MusicStorageEntry(std::string, int);
 };
 
@@ -35,7 +35,7 @@ private:
 
 public:
   MusicStorage();
-  ~MusicStorage() = default;
+  ~MusicStorage();
 
   /**
    * Removes a music object by its address in memory
@@ -45,7 +45,6 @@ public:
   const MusicStorageEntry *add();
 
   [[nodiscard]] const MusicStorageEntry *getFront();
-  [[nodiscard]] std::shared_ptr<Music> getFrontMem();
 
   void removeFront();
 };

@@ -231,17 +231,20 @@ void Room::handleStdinCommands() {
 }
 
 void Room::processThreadFinishedReceiving() {
-  int fdOfClientSocket = 0;
-  ::read(threadRecvPipe[0], reinterpret_cast<void *>(&fdOfClientSocket), sizeof (int));
+  struct {
+    int socketFD;
+    const MusicStorageEntry *p_queue;
+  } t;
+  ::read(threadRecvPipe[0], reinterpret_cast<void *>(&t), sizeof t);
 
-  if (fdOfClientSocket < 0) { // when true, means that we need to remove that client
-    fdOfClientSocket *= -1;
+  if (t.socketFD < 0) { // when true, means that we need to remove that client
+    t.socketFD *= -1;
     // remove it
-    clients.remove_if([fdOfClientSocket](room::Client &client){
-      return client.getSocket().getSocketFD() == fdOfClientSocket;
+    clients.remove_if([&t](room::Client &client){
+      return client.getSocket().getSocketFD() == t.socketFD;
     });
   } else { // other wise its all good, continue
-    sendSongToAllClients();
+    sendSongToAllClients(t.p_queue);
   }
 }
 
@@ -353,14 +356,17 @@ void Room::sendSongDataToClient(std::shared_ptr<Music> audio, room::Client &clie
   ::write(threadSendPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
 }
 
-void Room::sendSongToAllClients() {
-  auto next = queue.getFrontMem();
-  if (next != nullptr) {
-    for (room::Client &client : clients) {
-      FD_CLR(client.getSocket().getSocketFD(), &master);
-      std::thread thread = std::thread(&Room::sendSongDataToClient, this, next, std::ref(client));
-      thread.detach();
-    }
+void Room::sendSongToAllClients(const MusicStorageEntry *next) {
+  if (next == nullptr) {
+    return;
+  }
+  Music m;
+  m.setPath(next->path);
+  auto data = m.getMemShared();
+  for (room::Client &client : clients) {
+    FD_CLR(client.getSocket().getSocketFD(), &master);
+    std::thread thread = std::thread(&Room::sendSongDataToClient, this, data, std::ref(client));
+    thread.detach();
   }
 }
 
@@ -368,12 +374,15 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
   room::Client &client = *clientPtr;
   ThreadSafeSocket &socket = client.getSocket();
   int socketFD = socket.getSocketFD();
+  const MusicStorageEntry *queueEntry;
 
-  auto process = [this, &socket, &socketFD]() {
+  auto process = [this, &socket, &socketFD, &queueEntry]() {
     // wait till we acquire the lock
     std::unique_lock<std::mutex> lock{queueMutex};
     // add a Music object into the queue
-    auto queueEntry = queue.add();
+    queueEntry = queue.add();
+
+    lock.release();
 
     if (queueEntry == nullptr) {
       // adding to queue was unsuccessful
@@ -418,7 +427,13 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
   process();
 
   // notify parent thread that this thread is done
-  ::write(threadRecvPipe[1], reinterpret_cast<const void *>(&socketFD), sizeof (int));
+  struct {
+    int socketFD;
+    const MusicStorageEntry *p_queue;
+  } t;
+  t.socketFD = socketFD;
+  t.p_queue = queueEntry;
+  ::write(threadRecvPipe[1], reinterpret_cast<const void *>(&t), sizeof t);
 }
 
 void Room::sendBasicResponse(ThreadSafeSocket& socket, Command response) {

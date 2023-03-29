@@ -23,26 +23,6 @@ Music::Music(
   const std::vector<std::byte> &buffer
 ): name{std::move(songName)}, path{}, bytes{buffer} {}
 
-const std::string &Music::getName() const {
-  return name;
-}
-
-const std::string &Music::getPath() const {
-  return path;
-}
-
-std::vector<std::byte> &Music::getVector() {
-  return bytes;
-}
-
-void Music::setPath(const std::string &newPath) {
-  path = newPath;
-}
-
-void Music::setVector(const std::vector<std::byte> &musicBytes) {
-  bytes = musicBytes;
-}
-
 bool Music::readFileAtPath() {
   FILE *fp = fopen(path.c_str(), "r");
   if (fp == nullptr) {
@@ -71,4 +51,31 @@ void Music::writeToPath() {
   }
   fwrite(bytes.data(), bytes.size(), 1, fp);
   fclose(fp);
+}
+
+std::shared_ptr<Music> Music::getMemShared() const {
+  auto music = std::make_shared<Music>();
+  music.get()->setPath(path);
+  music.get()->readFileAtPath();
+  return music;
+}
+
+const std::string &Music::getName() const {
+  return name;
+}
+
+const std::string &Music::getPath() const {
+  return path;
+}
+
+std::vector<std::byte> &Music::getVector() {
+  return bytes;
+}
+
+void Music::setPath(const std::string &newPath) {
+  path = newPath;
+}
+
+void Music::setVector(const std::vector<std::byte> &musicBytes) {
+  bytes = musicBytes;
 }

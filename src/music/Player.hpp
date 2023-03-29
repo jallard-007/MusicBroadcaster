@@ -80,8 +80,6 @@ public:
 
   void seek(float time);
 
-  void clear();
-
   bool isPlaying();
 
 private:

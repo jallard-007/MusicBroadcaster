@@ -122,7 +122,7 @@ private:
   /**
    * Attempts to send the next song to all clients client
   */
-  void sendSongToAllClients();
+  void sendSongToAllClients(const MusicStorageEntry *);
 
   /**
    * Attempts to add a song to the queue

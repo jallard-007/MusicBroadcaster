@@ -59,7 +59,9 @@ void Client::handleClient() {
 
     // input from stdin, local user entered a command
     if (FD_ISSET(0, &read_fds)) { 
-      handleStdinCommand();
+      if (!handleStdinCommand()) {
+        return;
+      }
     }
   }
 }
@@ -114,6 +116,7 @@ bool Client::handleStdinCommand() {
       break;
 
     case ClientCommand::EXIT:
+      queue.~MusicStorage();
       exit(0);
 
     case ClientCommand::ADD_SONG:
@@ -182,7 +185,7 @@ bool Client::handleServerMessage() {
     
     case Commands::Command::PLAY_NEXT: {
       if (audioPlayer.isPlaying()) {
-        audioPlayer.clear();
+        audioPlayer.pause();
       }
       if (shouldRemoveFirstOnNext) {
         queue.removeFront();

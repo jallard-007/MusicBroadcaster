@@ -7,6 +7,7 @@
 #define MUSIC_CLASS_H
 
 #include <string>
+#include <memory>
 #include <vector>
 
 #define MAX_FILE_SIZE_BYTES 50000000 // 50 megabytes. can be changed to whatever
@@ -51,6 +52,7 @@ public:
   [[nodiscard]] const std::string &getName() const;
   [[nodiscard]] const std::string &getPath() const;
   [[nodiscard]] std::vector<std::byte> &getVector();
+  [[nodiscard]] std::shared_ptr<Music> getMemShared() const;
   void setPath(const std::string &);
   void setVector(const std::vector<std::byte>&);
   
