@@ -150,7 +150,7 @@ bool Client::handleServerMessage() {
   }
   Message mes(responseHeader);
   const uint32_t size = mes.getBodySize();
-  auto command = static_cast<const Commands::Command>(mes.getCommand());
+  const auto command = static_cast<Commands::Command>(mes.getCommand());
   switch (command) {
     case Commands::Command::SONG_DATA: {
       auto filePath = queue.add();
