@@ -273,11 +273,11 @@ void Room::attemptPlayNext() {
     return;
   }
 
-  auto fp = queue.getFront();
-  if (fp == nullptr) {
+  auto musicEntry = queue.getFront();
+  if (musicEntry == nullptr) {
     return;
   }
-  audioPlayer.feed(fp->c_str());
+  audioPlayer.feed(musicEntry->path.c_str());
   audioPlayer.play();
   for (room::Client &client : clients) {
     Message message;
@@ -411,7 +411,7 @@ void Room::attemptAddSongToQueue(room::Client* clientPtr) {
       // make FD negative to tell parent thread we need to remove the client
       socketFD *= -1;
     }
-    music.setPath(queueEntry->c_str());
+    music.setPath(queueEntry->path.c_str());
     music.writeToPath();
   };
 

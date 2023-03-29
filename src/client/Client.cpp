@@ -169,10 +169,10 @@ bool Client::handleServerMessage() {
         clientSocket.write(response.data(), response.size());
       }
 
-      auto filePath = queue.add();
+      auto musicEntry = queue.add();
       // write the data to disk
-      if (filePath != nullptr) {
-        music.setPath(filePath->c_str());
+      if (musicEntry != nullptr) {
+        music.setPath(musicEntry->path.c_str());
         music.writeToPath();
       } else {
         // we got a problem
@@ -181,6 +181,9 @@ bool Client::handleServerMessage() {
     }
     
     case Commands::Command::PLAY_NEXT: {
+      if (audioPlayer.isPlaying()) {
+        audioPlayer.clear();
+      }
       if (shouldRemoveFirstOnNext) {
         queue.removeFront();
       }
@@ -188,7 +191,12 @@ bool Client::handleServerMessage() {
       auto nextSongFileName = queue.getFront();
 
       if (nextSongFileName != nullptr) {
-        audioPlayer.feed(nextSongFileName->c_str());
+        audioPlayer.feed(nextSongFileName->path.c_str());
+        Music m;
+        m.setPath(nextSongFileName->path);
+        m.readFileAtPath();
+        std::cout << "path: " << nextSongFileName->path << '\n';
+        std::cout << "size: " << m.getVector().size() << '\n';
         audioPlayer.play();
         shouldRemoveFirstOnNext = true;
       } else {

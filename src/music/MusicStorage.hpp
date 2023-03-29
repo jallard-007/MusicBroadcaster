@@ -17,13 +17,21 @@
 /**
  * Storage class for music objects. Not fully implemented and integrated with room class
 */
+class MusicStorageEntry {
+public:
+  std::string path;
+  int fd;
+  MusicStorageEntry() = delete;
+  MusicStorageEntry(std::string, int);
+};
+
 class MusicStorage {
 private:
 
   /**
    * we dont need the music objects to be next to each other, so use a list
   */
-  std::list<std::string> songs;
+  std::list<MusicStorageEntry> songs;
 
 public:
   MusicStorage();
@@ -32,15 +40,11 @@ public:
   /**
    * Removes a music object by its address in memory
   */
-  void removeByAddress(const std::string *);
+  void removeByAddress(const MusicStorageEntry *);
 
-  /**
-   * Add an unnamed Music object to the back of the list
-   * @returns pointer to the new Music object, nullptr if no room
-  */
-  const std::string *add();
+  const MusicStorageEntry *add();
 
-  [[nodiscard]] const std::string *getFront();
+  [[nodiscard]] const MusicStorageEntry *getFront();
   [[nodiscard]] std::shared_ptr<Music> getFrontMem();
 
   void removeFront();

@@ -9,15 +9,18 @@
 #include "Music.hpp"
 #include "MusicStorage.hpp"
 
+MusicStorageEntry::MusicStorageEntry(std::string s, int i):
+  path{std::move(s)}, fd{i} {}
+
 MusicStorage::MusicStorage(): songs{} {}
 
-void MusicStorage::removeByAddress(const std::string *musicAddress) {
-  songs.remove_if([musicAddress](const std::string &song){
+void MusicStorage::removeByAddress(const MusicStorageEntry *musicAddress) {
+  songs.remove_if([musicAddress](const MusicStorageEntry &song){
     return &song == musicAddress;
   });
 }
 
-const std::string *MusicStorage::add() {
+const MusicStorageEntry *MusicStorage::add() {
   if (songs.size() >= MAX_SONGS) {
     // no more room in queue
     return nullptr;
@@ -27,12 +30,12 @@ const std::string *MusicStorage::add() {
   if (filedes < 1) {
     return nullptr;
   }
-  //unlink(s);
-  songs.emplace_back(s);
+  unlink(s);
+  songs.emplace_back(s, filedes);
   return &songs.back();
 }
 
-const std::string *MusicStorage::getFront() {
+const MusicStorageEntry *MusicStorage::getFront() {
   if (songs.empty()) {
     return nullptr;
   }
@@ -45,7 +48,7 @@ std::shared_ptr<Music> MusicStorage::getFrontMem() {
   }
   auto filePath = songs.front();
   auto music = std::make_shared<Music>();
-  music.get()->setPath(filePath);
+  music.get()->setPath(filePath.path);
   music.get()->readFileAtPath();
   return music;
 }
@@ -54,5 +57,6 @@ void MusicStorage::removeFront() {
   if (songs.empty()) {
     return;
   }
+  close(songs.front().fd);
   songs.pop_front();
 }

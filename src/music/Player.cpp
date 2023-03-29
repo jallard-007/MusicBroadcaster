@@ -27,6 +27,8 @@ Player::~Player() {
 }
 
 void Player::feed(const char *fp) {
+  shouldPlay = false;
+  wait();
   mpg123_open(mh, fp);
 }
 
@@ -73,7 +75,8 @@ void Player::seek(float time) {
 }
 
 void Player::clear() {
-
+  shouldPlay = false;
+  wait();
 }
 
 void Player::_play() {
@@ -94,5 +97,4 @@ void Player::_play() {
     // play the audio
     ao_play(dev, (char *)outBuffer, (uint_32)done);
   }
-  mpg123_close(mh);
 }

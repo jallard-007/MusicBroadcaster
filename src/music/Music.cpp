@@ -64,7 +64,6 @@ bool Music::readFileAtPath() {
   return true;
 }
 
-
 void Music::writeToPath() {
   FILE *fp = fopen(path.c_str(), "w");
   if (fp == nullptr) {
