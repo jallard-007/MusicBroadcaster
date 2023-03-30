@@ -2,7 +2,7 @@
 #define DEBUG_H
 
 // set to false to remove debug statements
-#define DEBUG true
+#define DEBUG false
 
 #if DEBUG
 #define DEBUG_P(a) a

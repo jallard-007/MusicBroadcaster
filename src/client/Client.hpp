@@ -18,10 +18,10 @@ private:
   int id;
   int fdMax;
   std::string clientName;
-  ThreadSafeSocket clientSocket;
   MusicStorage queue;
   Player audioPlayer;
   fd_set master;
+  ThreadSafeSocket clientSocket;
 
   /**
    * Asks for the path to the file.

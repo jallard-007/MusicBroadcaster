@@ -19,11 +19,11 @@
 
 Client::Client():
   shouldRemoveFirstOnNext{false}, id{}, fdMax{}, clientName{},
-  clientSocket{}, queue{}, audioPlayer{}, master{} {}
+  queue{}, audioPlayer{}, master{}, clientSocket{} {}
 
 Client::Client(std::string name):
   shouldRemoveFirstOnNext{false}, id{}, fdMax{}, clientName{std::move(name)},
-  clientSocket{}, queue{}, audioPlayer{}, master{} {}
+  queue{}, audioPlayer{}, master{}, clientSocket{} {}
 
 bool Client::initializeClient() {
   const uint16_t port = getPort();
