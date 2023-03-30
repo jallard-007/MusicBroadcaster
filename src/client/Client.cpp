@@ -12,6 +12,7 @@
 #include <sys/select.h>
 #include <unordered_map>
 
+#include "../debug.hpp"
 #include "Client.hpp"
 #include "../CLInput.hpp"
 #include "../messaging/Message.hpp"
@@ -52,6 +53,7 @@ void Client::handleClient() {
     }
 
     if (FD_ISSET(clientSocket.getSocketFD(), &read_fds)) {
+      DEBUG_P(std::cout << "server message\n");
       if (!handleServerMessage()) {
         return;
       }
@@ -120,6 +122,7 @@ bool Client::handleStdinCommand() {
       exit(0);
 
     case ClientCommand::ADD_SONG:
+      DEBUG_P(std::cout << "add song command\n");
       sendMusicFile();
       break;
 
@@ -157,6 +160,7 @@ bool Client::handleServerMessage() {
   const auto command = static_cast<Commands::Command>(mes.getCommand());
   switch (command) {
     case Commands::Command::SONG_DATA: {
+      DEBUG_P(std::cout << "song data message from server of size" << size << "\n");
       Music music;
       music.getVector().resize(size);
       // will want to eventually thread this off
@@ -165,13 +169,13 @@ bool Client::handleServerMessage() {
         std::cout << "lost connection to room\n";
         return false;
       }
-
+      DEBUG_P(std::cout << "read song data\n");
       { // send received ok response to server
         Message response;
         response.setCommand((std::byte)Commands::Command::RECV_OK);
         clientSocket.write(response.data(), response.size());
       }
-
+      DEBUG_P(std::cout << "sent back ok\n");
       auto musicEntry = queue.add();
       // write the data to disk
       if (musicEntry != nullptr) {
@@ -184,25 +188,25 @@ bool Client::handleServerMessage() {
     }
     
     case Commands::Command::PLAY_NEXT: {
+      DEBUG_P(std::cout << "play next message from server\n");
       if (audioPlayer.isPlaying()) {
         audioPlayer.pause();
       }
       if (shouldRemoveFirstOnNext) {
+        DEBUG_P(std::cout << "remove front first\n");
         queue.removeFront();
       }
       // TODO: need to check if there was a previous song that finished then remove it from the queue
       auto nextSongFileName = queue.getFront();
 
       if (nextSongFileName != nullptr) {
+        DEBUG_P(std::cout << "feeding next\n");
+
         audioPlayer.feed(nextSongFileName->path.c_str());
-        Music m;
-        m.setPath(nextSongFileName->path);
-        m.readFileAtPath();
-        std::cout << "path: " << nextSongFileName->path << '\n';
-        std::cout << "size: " << m.getVector().size() << '\n';
         audioPlayer.play();
         shouldRemoveFirstOnNext = true;
       } else {
+        DEBUG_P(std::cout << "nothing to feed\n");
         shouldRemoveFirstOnNext = false;
       }
       break;
@@ -220,6 +224,7 @@ void Client::sendMusicFile() {
     return;
   }
 
+  DEBUG_P(std::cout << "sending req add to queue to server\n");
   {
     // create request message
     Message request;
@@ -229,6 +234,7 @@ void Client::sendMusicFile() {
     }
   }
 
+  DEBUG_P(std::cout << "waiting for ok from server\n");
   {
     // await OK from room
     std::byte responseBuffer[6];
@@ -242,7 +248,7 @@ void Client::sendMusicFile() {
       return;
     }
   }
-  
+  DEBUG_P(std::cout << "got ok\n");
   Music music; // create music object
   std::string input;
   while (true) {
@@ -256,6 +262,7 @@ void Client::sendMusicFile() {
   Message header;
   header.setCommand((std::byte)Commands::Command::SONG_DATA);
   header.setBodySize((uint32_t)music.getVector().size());
+  DEBUG_P(std::cout << "sending data \n");
   if (!clientSocket.writeHeaderAndData(header.data(), music.getVector().data(), music.getVector().size())) {
     return; // writing to the socket failed
   }

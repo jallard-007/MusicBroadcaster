@@ -8,6 +8,7 @@
 
 #include <list>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include "Music.hpp"
@@ -21,6 +22,7 @@ class MusicStorageEntry {
 public:
   std::string path;
   int fd;
+  std::mutex entryMutex;
   MusicStorageEntry();
   MusicStorageEntry(std::string, int);
 };
@@ -42,9 +44,9 @@ public:
   */
   void removeByAddress(const MusicStorageEntry *);
 
-  const MusicStorageEntry *add();
+  MusicStorageEntry *add();
 
-  [[nodiscard]] const MusicStorageEntry *getFront();
+  [[nodiscard]] MusicStorageEntry *getFront();
 
   void removeFront();
 };

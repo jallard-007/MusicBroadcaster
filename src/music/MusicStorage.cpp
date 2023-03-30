@@ -10,10 +10,10 @@
 #include "MusicStorage.hpp"
 
 MusicStorageEntry::MusicStorageEntry():
-  path{""}, fd{0} {}
+  path{""}, fd{0}, entryMutex{} {}
 
 MusicStorageEntry::MusicStorageEntry(std::string s, int i):
-  path{std::move(s)}, fd{i} {}
+  path{std::move(s)}, fd{i}, entryMutex{} {}
 
 MusicStorage::MusicStorage(): songs{} {}
 
@@ -31,7 +31,7 @@ void MusicStorage::removeByAddress(const MusicStorageEntry *musicAddress) {
   });
 }
 
-const MusicStorageEntry *MusicStorage::add() {
+MusicStorageEntry *MusicStorage::add() {
   if (songs.size() >= MAX_SONGS) {
     return nullptr;
   }
@@ -43,7 +43,7 @@ const MusicStorageEntry *MusicStorage::add() {
   return &songs.emplace_back(s, filedes);
 }
 
-const MusicStorageEntry *MusicStorage::getFront() {
+MusicStorageEntry *MusicStorage::getFront() {
   if (songs.size() == 0) {
     return nullptr;
   }

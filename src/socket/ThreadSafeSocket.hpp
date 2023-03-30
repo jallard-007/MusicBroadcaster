@@ -27,12 +27,12 @@ private:
   /**
    * lock for reading
   */
-  mutable std::mutex readLock;
+  std::mutex readLock;
 
   /**
    * lock for writing
   */
-  mutable std::mutex writeLock;
+  std::mutex writeLock;
 
 public:
   ThreadSafeSocket();
@@ -83,7 +83,7 @@ public:
    * @param dataSize size of data
    * @returns true if successfully wrote data, false on error
   */
-  bool write(const std::byte *data, size_t dataSize) const;
+  bool write(const std::byte *data, size_t dataSize);
 
     /**
    * Write raw data to socketFD
@@ -91,7 +91,7 @@ public:
    * @param dataSize size of data
    * @returns true if successfully wrote data, false on error
   */
-  bool writeHeaderAndData(const std::byte header[6], const std::byte *data, size_t dataSize) const;
+  bool writeHeaderAndData(const std::byte header[6], const std::byte *data, size_t dataSize);
 
   /**
    * Read raw data from socketFD, might not read all bytes

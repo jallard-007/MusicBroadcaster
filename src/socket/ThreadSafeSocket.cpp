@@ -71,7 +71,7 @@ bool ThreadSafeSocket::connect(const std::string &ip, const uint16_t port) {
   return true;
 }
 
-bool ThreadSafeSocket::write(const std::byte *data, const size_t dataSize) const {
+bool ThreadSafeSocket::write(const std::byte *data, const size_t dataSize) {
   std::unique_lock<std::mutex> lock(writeLock);
   if (send(socketFD, data, dataSize, 0) == -1) {
     fprintf(stderr, "send: %s (%d)\n", strerror(errno), errno);
@@ -80,7 +80,7 @@ bool ThreadSafeSocket::write(const std::byte *data, const size_t dataSize) const
   return true;
 }
 
-bool ThreadSafeSocket::writeHeaderAndData(const std::byte header[6], const std::byte *data, size_t dataSize) const {
+bool ThreadSafeSocket::writeHeaderAndData(const std::byte header[6], const std::byte *data, size_t dataSize) {
    std::unique_lock<std::mutex> lock(writeLock);
    if (send(socketFD, header, 6, 0) == -1) {
     fprintf(stderr, "send: %s (%d)\n", strerror(errno), errno);

@@ -80,7 +80,7 @@ private:
   /**
    * mutex for queue
   */
-  mutable std::mutex queueMutex;
+  std::mutex queueMutex;
 
   /**
    * master file descriptor list
@@ -122,7 +122,7 @@ private:
   /**
    * Attempts to send the next song to all clients client
   */
-  void sendSongToAllClients(const MusicStorageEntry *);
+  void sendSongToAllClients(MusicStorageEntry *);
 
   /**
    * Attempts to add a song to the queue
