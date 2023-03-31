@@ -35,6 +35,10 @@ bool Music::readFileAtPath() {
     std::cerr << "Error: File too big. Max file size is " << (MAX_FILE_SIZE_BYTES / 1000000.0) << " megabytes\n";
     return false;
   }
+  if (fileSize == 0) {
+    std::cerr << "Error: File empty\n";
+    return false;
+  }
 
   bytes.resize(fileSize); // allocate memory to fit the file
   

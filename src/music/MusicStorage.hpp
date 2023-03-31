@@ -8,6 +8,7 @@
 
 #include <list>
 #include <memory>
+#include <regex>
 #include <mutex>
 #include <string>
 
@@ -21,7 +22,7 @@
 class MusicStorageEntry {
 public:
   std::string path;
-  int fd;
+  const int fd;
   std::mutex entryMutex;
   MusicStorageEntry();
   MusicStorageEntry(std::string, int);
@@ -29,11 +30,15 @@ public:
 
 class MusicStorage {
 private:
-
+  static const std::regex tempFileRegEx;
   /**
    * we dont need the music objects to be next to each other, so use a list
   */
   std::list<MusicStorageEntry> songs;
+
+  std::mutex musicStorageMutex;
+
+  MusicStorageEntry *add(const std::string &path, int fd);
 
 public:
   MusicStorage();
@@ -44,11 +49,14 @@ public:
   */
   void removeByAddress(const MusicStorageEntry *);
 
-  MusicStorageEntry *add();
+  MusicStorageEntry *addAndLockEntry();
+
+  MusicStorageEntry *addLocalAndLockEntry();
 
   [[nodiscard]] MusicStorageEntry *getFront();
 
   void removeFront();
 };
+
 
 #endif

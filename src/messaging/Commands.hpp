@@ -24,6 +24,7 @@ enum class Command : std::underlying_type_t<std::byte> {
 
     REQ_ADD_TO_QUEUE, /* client asks room if it can queue a song */
                       /* example: REQ_ADD_TO_QUEUE <options byte> <4 bytes size of whole audio file> */
+    RES_ADD_TO_QUEUE,
 
     /* message contains song data
      * should only be sent if received an ok after REQ_ADD_TO_QUEUE
@@ -58,6 +59,8 @@ enum class Command : std::underlying_type_t<std::byte> {
 /* They will start with the command name then the option */
 #define JOIN_NAME (std::byte)1 /* With this option, a name should be in the body as a null terminated string */
 
+#define RES_ADD_TO_QUEUE_OK (std::byte)1 /* response to client, the client can upload a song */
+#define RES_ADD_TO_QUEUE_NOT_OK (std::byte)0 /* response to client, client cannot upload song */
 }
 
 #endif

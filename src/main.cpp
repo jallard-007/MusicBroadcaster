@@ -112,3 +112,27 @@ int main() {
     }
   }
 }
+
+/* tests
+
+  const std::regex regEx{"/tmp/musicBroadcaster_[-a-zA-Z0-9._]{6}"};
+  std::vector<std::string> strs = {
+    "/tmp/musicBroadcaster_adscfg",
+    "/tmp/musicBroadcaster_a.s.fg",
+    "/tmp/musicBroadcaster_a-s-g_",
+
+    "/tmp/musicBroadcaster_ad234fg",
+    "/usr/tmp/musicBroadcaster_adsfg",
+    "/usr/include",
+  };
+  for (std::string &sr : strs) {
+    if (std::regex_match(sr, regEx)) {
+      std::cout << "match: " << sr << '\n';
+    } else {
+      std::cout << "not match: " << sr << '\n';
+    }
+  }
+
+
+
+*/

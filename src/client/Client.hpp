@@ -24,9 +24,9 @@ private:
   ThreadSafeSocket clientSocket;
 
   /**
-   * Asks for the path to the file.
-   * Then sends the size of the file as well as the file itself through clientSocket
   */
+  void reqSendMusicFile();
+
   void sendMusicFile();
 
   bool handleStdinCommand();

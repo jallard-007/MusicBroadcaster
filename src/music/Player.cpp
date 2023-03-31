@@ -55,7 +55,6 @@ void Player::play() {
 
 void Player::pause() {
   shouldPlay = false;
-  wait();
 }
 
 void Player::wait() {

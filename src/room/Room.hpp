@@ -17,6 +17,11 @@
 #include "../messaging/Commands.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
+typedef struct {
+    int socketFD;
+    MusicStorageEntry *p_queue;
+} RecvPipe_t;
+
 class Room {
 private:
 
@@ -78,11 +83,6 @@ private:
   Player audioPlayer;
 
   /**
-   * mutex for queue
-  */
-  std::mutex queueMutex;
-
-  /**
    * master file descriptor list
   */
   fd_set master;
@@ -99,10 +99,12 @@ private:
   */
   bool handleClientRequest(room::Client& client);
 
+  void handleStdinAddSong();
+
   /**
    * Handles all stdin input
   */
-  static void handleStdinCommands();
+  bool handleStdinCommands();
 
   /**
    * 
@@ -122,13 +124,13 @@ private:
   /**
    * Attempts to send the next song to all clients client
   */
-  void sendSongToAllClients(MusicStorageEntry *);
+  void sendSongToAllClients(const RecvPipe_t &);
 
   /**
    * Attempts to add a song to the queue
    * @param clientPtr pointer to the client object to communicate with
   */
-  void attemptAddSongToQueue(room::Client *clientPtr);
+  void handleREQ_ADD_TO_QUEUE(room::Client *clientPtr);
 
   void waitOnAudio();
 
@@ -139,7 +141,7 @@ private:
    * @param socket socket to send to
    * @param responseCommand one of the responses define in Commands.hpp
   */
-  static void sendBasicResponse(ThreadSafeSocket& socket, Commands::Command responseCommand);
+  static void sendBasicResponse(ThreadSafeSocket& socket, Commands::Command responseCommand, std::byte option = (std::byte)0);
 
 public:
 

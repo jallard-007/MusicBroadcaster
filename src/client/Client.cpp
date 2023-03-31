@@ -72,6 +72,7 @@ enum class ClientCommand {
   FAQ,
   HELP,
   EXIT,
+  QUIT,
   ADD_SONG,
   SEEK,
 };
@@ -80,6 +81,7 @@ const std::unordered_map<std::string, ClientCommand> clientCommandMap = {
   {"faq", ClientCommand::FAQ},
   {"help", ClientCommand::HELP},
   {"exit", ClientCommand::EXIT},
+  {"quit", ClientCommand::QUIT},
   {"add song", ClientCommand::ADD_SONG},
   {"seek", ClientCommand::SEEK},
 };
@@ -118,13 +120,18 @@ bool Client::handleStdinCommand() {
       break;
 
     case ClientCommand::EXIT:
+      audioPlayer.~Player();
+      queue.~MusicStorage();
+      return false;
+
+    case ClientCommand::QUIT:
       queue.~MusicStorage();
       exit(0);
 
     case ClientCommand::ADD_SONG:
       DEBUG_P(std::cout << "add song command\n");
-      sendMusicFile();
-      break;
+      reqSendMusicFile();
+      return true;
 
     case ClientCommand::SEEK: {
       // std::cout << "Enter a time to seek to:\n >> ";
@@ -169,18 +176,19 @@ bool Client::handleServerMessage() {
         std::cout << "lost connection to room\n";
         return false;
       }
-      DEBUG_P(std::cout << "read song data\n");
+      DEBUG_P(std::cout << "got song data\n");
       { // send received ok response to server
         Message response;
         response.setCommand((std::byte)Commands::Command::RECV_OK);
         clientSocket.write(response.data(), response.size());
       }
       DEBUG_P(std::cout << "sent back ok\n");
-      auto musicEntry = queue.add();
+      auto musicEntry = queue.addAndLockEntry();
       // write the data to disk
       if (musicEntry != nullptr) {
         music.setPath(musicEntry->path.c_str());
         music.writeToPath();
+        musicEntry->entryMutex.unlock();
       } else {
         // we got a problem
       }
@@ -201,7 +209,6 @@ bool Client::handleServerMessage() {
 
       if (nextSongFileName != nullptr) {
         DEBUG_P(std::cout << "feeding next\n");
-
         audioPlayer.feed(nextSongFileName->path.c_str());
         audioPlayer.play();
         shouldRemoveFirstOnNext = true;
@@ -212,13 +219,23 @@ bool Client::handleServerMessage() {
       break;
     }
 
+    case Commands::Command::RES_ADD_TO_QUEUE: {
+      std::byte option = mes.getOptions();
+      if (option == RES_ADD_TO_QUEUE_OK) {
+        DEBUG_P(std::cout << "got ok\n");
+        sendMusicFile();
+      } else{
+        std::cout << "The room is not allowing you to upload, try again later\n";
+      }
+    }
+
     default:
       break;
   }
   return true;
 }
 
-void Client::sendMusicFile() {
+void Client::reqSendMusicFile() {
   if (clientSocket.getSocketFD() == 0) {
     std::cerr << "socket file descriptor not set\n";
     return;
@@ -233,27 +250,18 @@ void Client::sendMusicFile() {
       return; // writing to the socket failed
     }
   }
+}
 
-  DEBUG_P(std::cout << "waiting for ok from server\n");
-  {
-    // await OK from room
-    std::byte responseBuffer[6];
-    if (clientSocket.readAll(responseBuffer, sizeof responseBuffer) == 0) {
-      // disconnected
-      return;
-    }
-    Message response(responseBuffer);
-    if (static_cast<Commands::Command>(response.getCommand()) != Commands::Command::RES_OK) {
-      std::cout << "Room is not allowing you to upload, try again later\n";
-      return;
-    }
-  }
-  DEBUG_P(std::cout << "got ok\n");
+void Client::sendMusicFile() {
   Music music; // create music object
   std::string input;
   while (true) {
-    std::cout << "Enter file path:\n >> ";
+    std::cout << "Enter mp3 file path (-1 to cancel):\n >> ";
     std::getline(std::cin, input);
+    if (input == "-1") {
+      // TODO: need to add cancel command, so that client thread on server side does not freeze
+      return;
+    }
     music.setPath(input);
     if (music.readFileAtPath()) {
       break; // file read successfully, exit loop
@@ -264,8 +272,12 @@ void Client::sendMusicFile() {
   header.setBodySize((uint32_t)music.getVector().size());
   DEBUG_P(std::cout << "sending data \n");
   if (!clientSocket.writeHeaderAndData(header.data(), music.getVector().data(), music.getVector().size())) {
-    return; // writing to the socket failed
+    DEBUG_P(std::cout << "couldn't send \n");
+  } else {
+    DEBUG_P(std::cout << "sent data \n");
   }
+  std::cout << " >> ";
+  std::cout.flush();
 }
 
 const std::string &Client::getName() const  {
@@ -283,5 +295,3 @@ int Client::getId() const {
 const ThreadSafeSocket &Client::getSocket() const {
   return clientSocket;
 }
-
-
