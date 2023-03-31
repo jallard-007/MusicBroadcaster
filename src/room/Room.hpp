@@ -99,7 +99,7 @@ private:
   /**
    * Handles all stdin input
   */
-  bool handleStdinCommands();
+  void handleStdinCommands();
 
   /**
    * 

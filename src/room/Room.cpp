@@ -170,7 +170,6 @@ enum class RoomCommand {
   FAQ,
   HELP,
   EXIT,
-  QUIT,
   ADD_SONG,
   SEEK,
   PLAY
@@ -180,7 +179,6 @@ const std::unordered_map<std::string, RoomCommand> roomCommandMap = {
   {"faq", RoomCommand::FAQ},
   {"help", RoomCommand::HELP},
   {"exit", RoomCommand::EXIT},
-  {"quit", RoomCommand::QUIT},
   {"add song", RoomCommand::ADD_SONG},
   {"seek", RoomCommand::SEEK},
   {"play", RoomCommand::PLAY}
@@ -243,7 +241,7 @@ void Room::handleStdinAddSong(MusicStorageEntry *queueEntry) {
   std::cout.flush();
 }
 
-bool Room::handleStdinCommands() {
+void Room::handleStdinCommands() {
   std::string input;
   std::getline(std::cin, input);
   RoomCommand command;
@@ -252,7 +250,7 @@ bool Room::handleStdinCommands() {
   } catch (const std::out_of_range &err){
     std::cout << "Invalid command. Try 'help' for information\n >> ";
     std::cout.flush();
-    return true;
+    return;
   }
 
   switch (command) {
@@ -265,9 +263,6 @@ bool Room::handleStdinCommands() {
       break;
 
     case RoomCommand::EXIT:
-      return false;
-
-    case RoomCommand::QUIT:
       queue.~MusicStorage();
       exit(0);
 
@@ -276,7 +271,7 @@ bool Room::handleStdinCommands() {
       MusicStorageEntry *queueEntry = queue.addLocalAndLockEntry();
       if (queueEntry == nullptr) {
         std::cerr << "Unable to add a song to the queue\n";
-        return true;
+        return;
       }
 
       Message m;
@@ -287,7 +282,7 @@ bool Room::handleStdinCommands() {
       FD_CLR(0, &master);
       std::thread addSongThread = std::thread(&Room::handleStdinAddSong, this, queueEntry);
       addSongThread.detach();
-      return true;
+      return;
     }
 
     case RoomCommand::PLAY:
@@ -303,7 +298,6 @@ bool Room::handleStdinCommands() {
   }
   std::cout << " >> ";
   std::cout.flush();
-  return true;
 }
 
 void Room::processThreadFinishedReceiving() {
