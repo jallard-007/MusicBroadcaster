@@ -26,6 +26,8 @@ enum class Command : std::underlying_type_t<std::byte> {
                       /* example: REQ_ADD_TO_QUEUE <options byte> <4 bytes size of whole audio file> */
     RES_ADD_TO_QUEUE,
 
+    ADD_EMPTY_TO_QUEUE, /* from server to client: add an empty spot in the queue */
+
     /* message contains song data
      * should only be sent if received an ok after REQ_ADD_TO_QUEUE
      * example: SONG_DATA <option byte> <4 bytes size of body> <body>

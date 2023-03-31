@@ -92,6 +92,7 @@ void clientShowHelp() {
   "List of commands as client:\n\n";
 }
 
+// TODO:
 void clientShowFAQ() {
   std::cout <<
   "Question 1:\n\n";
@@ -119,7 +120,6 @@ bool Client::handleStdinCommand() {
       break;
 
     case ClientCommand::EXIT:
-      queue.~MusicStorage();
       return false;
 
     case ClientCommand::QUIT:
@@ -164,6 +164,7 @@ bool Client::handleServerMessage() {
   const uint32_t size = mes.getBodySize();
   const auto command = static_cast<Commands::Command>(mes.getCommand());
   switch (command) {
+    // always take the next queue entry, if there are none available, add one
     case Commands::Command::SONG_DATA: {
       DEBUG_P(std::cout << "song data message from server of size" << size << "\n");
       Music music;
@@ -181,7 +182,7 @@ bool Client::handleServerMessage() {
         clientSocket.write(response.data(), response.size());
       }
       DEBUG_P(std::cout << "sent back ok\n");
-      auto musicEntry = queue.addAndLockEntry();
+      auto musicEntry = queue.getFirstEmptyAndLockEntry();
       // write the data to disk
       if (musicEntry != nullptr) {
         music.setPath(musicEntry->path.c_str());
@@ -214,6 +215,11 @@ bool Client::handleServerMessage() {
         DEBUG_P(std::cout << "nothing to feed\n");
         shouldRemoveFirstOnNext = false;
       }
+      break;
+    }
+
+    case Commands::Command::ADD_EMPTY_TO_QUEUE: {
+      queue.addEmpty();
       break;
     }
 
@@ -251,6 +257,7 @@ void Client::reqSendMusicFile() {
 }
 
 void Client::sendMusicFile() {
+  MusicStorageEntry *p_entry = queue.addLocalAndLockEntry();
   Music music; // create music object
   std::string input;
   while (true) {
@@ -258,10 +265,13 @@ void Client::sendMusicFile() {
     std::getline(std::cin, input);
     if (input == "-1") {
       // TODO: need to add cancel command, so that client thread on server side does not freeze
+      queue.removeByAddress(p_entry);
+      p_entry->entryMutex.unlock();
       return;
     }
     music.setPath(input);
     if (music.readFileAtPath()) {
+      p_entry->path = input;
       break; // file read successfully, exit loop
     }
   }
@@ -274,6 +284,7 @@ void Client::sendMusicFile() {
   } else {
     DEBUG_P(std::cout << "sent data \n");
   }
+  p_entry->entryMutex.unlock();
   std::cout << " >> ";
   std::cout.flush();
 }

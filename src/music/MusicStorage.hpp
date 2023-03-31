@@ -8,6 +8,7 @@
 
 #include <list>
 #include <memory>
+#include <atomic>
 #include <regex>
 #include <mutex>
 #include <string>
@@ -21,11 +22,12 @@
 */
 class MusicStorageEntry {
 public:
+  std::atomic<int> sent;
+  int fd;
   std::string path;
-  const int fd;
   std::mutex entryMutex;
   MusicStorageEntry();
-  MusicStorageEntry(std::string, int);
+  MusicStorageEntry(int, std::string);
 };
 
 class MusicStorage {
@@ -49,11 +51,17 @@ public:
   */
   void removeByAddress(const MusicStorageEntry *);
 
+  MusicStorageEntry *getFirstEmptyAndLockEntry();
+
+  MusicStorageEntry *addEmpty();
+
   MusicStorageEntry *addAndLockEntry();
 
   MusicStorageEntry *addLocalAndLockEntry();
 
   [[nodiscard]] MusicStorageEntry *getFront();
+
+  bool hasPreviousBeenSent(MusicStorageEntry *);
 
   void removeFront();
 };

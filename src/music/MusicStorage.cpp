@@ -12,10 +12,10 @@
 #include "MusicStorage.hpp"
 
 MusicStorageEntry::MusicStorageEntry():
-  path{""}, fd{0}, entryMutex{} {}
+  sent{false}, fd{0}, path{""},  entryMutex{} {}
 
-MusicStorageEntry::MusicStorageEntry(std::string s, int i):
-  path{std::move(s)}, fd{i}, entryMutex{} {}
+MusicStorageEntry::MusicStorageEntry(int i, std::string s):
+  sent{false}, fd{i}, path{std::move(s)},  entryMutex{} {}
 
 const std::regex MusicStorage::tempFileRegEx{"/tmp/musicBroadcaster_[-a-zA-Z0-9._]{6}"};
 
@@ -45,9 +45,49 @@ MusicStorageEntry *MusicStorage::add(const std::string &path, int fd) {
   DEBUG_P(std::cout << "waiting for queue mutex\n");
   musicStorageMutex.lock();
   DEBUG_P(std::cout << "got queue mutex\n");
-  auto &p_entry = songs.emplace_back(path, fd);
+  auto &p_entry = songs.emplace_back(fd, path);
   p_entry.entryMutex.lock();
   DEBUG_P(std::cout << "got entry mutex\n");
+  musicStorageMutex.unlock();
+  DEBUG_P(std::cout << "unlocked queue mutex\n");
+  return &p_entry;
+}
+
+MusicStorageEntry *MusicStorage::getFirstEmptyAndLockEntry() {
+  if (songs.size() >= MAX_SONGS) {
+    return nullptr;
+  }
+  char s[] = "/tmp/musicBroadcaster_XXXXXX";
+  int filedes = mkstemp(s);
+  if (filedes < 1) {
+    return nullptr;
+  }
+  DEBUG_P(std::cout << "waiting for queue mutex\n");
+  musicStorageMutex.lock();
+  DEBUG_P(std::cout << "got queue mutex\n");
+  for (MusicStorageEntry &entry : songs) {
+    if (entry.path == "" && entry.entryMutex.try_lock()) {
+      DEBUG_P(std::cout << "got entry mutex\n");
+      entry.path = s;
+      entry.fd = filedes;
+      musicStorageMutex.unlock();
+      DEBUG_P(std::cout << "unlocked queue mutex\n");
+      return &entry;
+    }
+  }
+  auto &p_entry = songs.emplace_back(filedes, s);
+  p_entry.entryMutex.lock();
+  DEBUG_P(std::cout << "got entry mutex\n");
+  musicStorageMutex.unlock();
+  DEBUG_P(std::cout << "unlocked queue mutex\n");
+  return &p_entry;
+}
+
+MusicStorageEntry *MusicStorage::addEmpty() {
+  DEBUG_P(std::cout << "waiting for queue mutex\n");
+  musicStorageMutex.lock();
+  DEBUG_P(std::cout << "got queue mutex\n");
+  auto &p_entry = songs.emplace_back(0, "");
   musicStorageMutex.unlock();
   DEBUG_P(std::cout << "unlocked queue mutex\n");
   return &p_entry;
@@ -77,6 +117,21 @@ MusicStorageEntry *MusicStorage::getFront() {
     return nullptr;
   }
   return &songs.front();
+}
+
+bool MusicStorage::hasPreviousBeenSent(MusicStorageEntry *curr) {
+  auto iter = songs.begin();
+  while (iter != songs.end()) {
+    if (&*iter == curr) {
+      if (&songs.front() != curr) {
+        return (--iter)->sent > 0;
+      } else {
+        return true;
+      }
+    }
+    ++iter;
+  }
+  return true;
 }
 
 void MusicStorage::removeFront() {

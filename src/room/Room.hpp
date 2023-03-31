@@ -20,7 +20,7 @@
 typedef struct {
     int socketFD;
     MusicStorageEntry *p_queue;
-} RecvPipe_t;
+} PipeData_t;
 
 class Room {
 private:
@@ -34,11 +34,6 @@ private:
    * keep track of the biggest file descriptor for select
   */
   int fdMax;
-
-  /**
-   * number of clients that have fully received the current song
-  */
-  uint32_t numClientsReceivedFile;
 
   /**
    * Socket in which connections are established
@@ -99,7 +94,7 @@ private:
   */
   bool handleClientRequest(room::Client& client);
 
-  void handleStdinAddSong();
+  void handleStdinAddSong(MusicStorageEntry *queueEntry);
 
   /**
    * Handles all stdin input
@@ -119,18 +114,18 @@ private:
   /**
    * Sends song data to a specific client
   */
-  void sendSongDataToClient(std::shared_ptr<Music> audio, room::Client &client);
+  void sendSongDataToClient(std::shared_ptr<Music> audio, MusicStorageEntry *p_queue, room::Client &client);
 
   /**
    * Attempts to send the next song to all clients client
   */
-  void sendSongToAllClients(const RecvPipe_t &);
+  void sendSongToAllClients(const PipeData_t &);
 
   /**
    * Attempts to add a song to the queue
    * @param clientPtr pointer to the client object to communicate with
   */
-  void handleREQ_ADD_TO_QUEUE(room::Client *clientPtr);
+  void handleREQ_ADD_TO_QUEUE(room::Client *p_client, MusicStorageEntry *p_queue);
 
   void waitOnAudio();
 
