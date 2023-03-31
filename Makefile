@@ -1,6 +1,6 @@
 # Compiler and its settings
 GXX=g++
-GXXFLAGS=-std=c++17 -Wall -Wpedantic -Wextra -Wconversion -Werror
+GXXFLAGS=-std=c++17 -Wall -Wpedantic -Wextra -Wconversion -Werror -O0
 
 # Source and object directories
 SRC_DIR=./src
@@ -13,6 +13,9 @@ default:
 
 all: obj/main.o obj/CLInput.o obj/clientClient.o obj/Message.o obj/Music.o obj/MusicStorage.o obj/Player.o obj/serverClient.o obj/Room.o obj/BaseSocket.o obj/ThreadSafeSocket.o
 	$(GXX) $(GXXFLAGS) $^ -o main -lao -lmpg123
+
+static: obj/main.o obj/CLInput.o obj/clientClient.o obj/Message.o obj/Music.o obj/MusicStorage.o obj/Player.o obj/serverClient.o obj/Room.o obj/BaseSocket.o obj/ThreadSafeSocket.o
+	$(GXX) $(GXXFLAGS) $^ -o main /usr/local/lib/libao.a /usr/local/lib/libmpg123.a
 
 # src/main.cpp
 obj/main.o: src/main.cpp src/debug.hpp

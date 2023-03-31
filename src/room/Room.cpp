@@ -268,7 +268,8 @@ bool Room::handleStdinCommands() {
       break;
 
     case RoomCommand::EXIT:
-      return false;
+      queue.~MusicStorage();
+      exit(0);
 
     case RoomCommand::ADD_SONG: {
       // clear stdin from master

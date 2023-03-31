@@ -104,8 +104,7 @@ bool Client::handleStdinCommand() {
   try {
     command = clientCommandMap.at(input);
   } catch (const std::out_of_range &err){
-    std::cout << "Invalid command. Try 'help' for information\n";
-    std::cout << " >> ";
+    std::cout << "Invalid command. Try 'help' for information\n >> ";
     std::cout.flush();
     return true;
   }
@@ -120,7 +119,6 @@ bool Client::handleStdinCommand() {
       break;
 
     case ClientCommand::EXIT:
-      audioPlayer.~Player();
       queue.~MusicStorage();
       return false;
 
