@@ -20,12 +20,12 @@
 typedef struct {
   int socketFD;
   room::Client *p_client;
-  MusicStorageEntry *p_queue;
+  MusicStorageEntry *p_entry;
 } SendPipeData_t;
 
 typedef struct {
   int socketFD;
-  MusicStorageEntry *p_queue;
+  MusicStorageEntry *p_entry;
 } RecvPipeData_t;
 
 class Room {
@@ -93,11 +93,15 @@ private:
   */
   void handleConnectionRequests();
 
+  void handleCancelReqAddQueue(MusicStorageEntry *);
+
   /**
   */
-  void handleClientReqAddQueueHelper_threaded(room::Client *p_client, MusicStorageEntry *p_queue);
+  void handleClientReqSongData_threaded(room::Client *p_client, uint32_t sizeOfFile);
 
   void handleClientReqAddQueue(room::Client &client);
+
+
   /**
    * Handles incoming messages from the client.
    * @param client reference to client object

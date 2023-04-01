@@ -168,7 +168,7 @@ void Room::processThreadFinishedReceiving() {
     });
     return;
   }
-  if (t.p_queue != nullptr) {
+  if (t.p_entry != nullptr) {
     sendSongToAllClients(t);
   } else {
     DEBUG_P(std::cout << "adding was cancelled, now adding client back to master\n");
@@ -192,12 +192,15 @@ void Room::processThreadFinishedSending() {
     if (t.p_client->sendingCount == 0) {
       FD_SET(t.socketFD , &master);
     }
-    // TODO: will need to make sure that the song has been sent to all clients before removing it
-    attemptPlayNext();
   }
 }
 
-void Room::sendSongDataToClient_threaded(std::shared_ptr<Music> audio, const MusicStorageEntry *p_queue, uint8_t queuePosition, room::Client *p_client) {
+void Room::sendSongDataToClient_threaded(
+  std::shared_ptr<Music> audio,
+  const MusicStorageEntry *p_queue,
+  uint8_t queuePosition,
+  room::Client *p_client
+) {
   auto &clientSocket = p_client->getSocket();
   SendPipeData_t t {
     clientSocket.getSocketFD(),
@@ -205,70 +208,49 @@ void Room::sendSongDataToClient_threaded(std::shared_ptr<Music> audio, const Mus
     const_cast<MusicStorageEntry *>(p_queue)
   };
 
-  auto process = [&t, &clientSocket, &audio, queuePosition]() {
-    { // send file to client
-      const auto &audioData = audio->getVector();
-      Message message;
-      message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
-      message.setOptions(static_cast<std::byte>(queuePosition));
-      message.setBodySize(static_cast<uint32_t>(audioData.size()));
-      DEBUG_P(std::cout << "sending file to client\n");
-      if (!clientSocket.writeHeaderAndData(message.data(), audioData.data(), audioData.size())) {
-        t.socketFD *= -1;
-        return;
-      }
-    }
-    { // wait for ok response from client
-      std::byte responseHeader[SIZE_OF_HEADER];
-      ::memset(responseHeader, 0, SIZE_OF_HEADER);
-      DEBUG_P(std::cout << "waiting for ok from client\n");
-      if (clientSocket.readAll(responseHeader, sizeof responseHeader) == 0) {
-        t.socketFD *= -1;
-        return;
-      }
-      Message message(responseHeader);
-      if (static_cast<Command>(message.getCommand()) != Command::RECV_OK) {
-        t.socketFD *= -1;
-        DEBUG_P(std::cout << "got something other than ok from client\n");
-        return;
-      }
-      DEBUG_P(std::cout << "got ok from client\n");
-      t.p_queue->sent++;
-    }
-  };
-
-  process();
+  // send file to client
+  const auto &audioData = audio->getVector();
+  Message message;
+  message.setCommand(static_cast<std::byte>(Command::SONG_DATA));
+  message.setOptions(static_cast<std::byte>(queuePosition));
+  message.setBodySize(static_cast<uint32_t>(audioData.size()));
+  DEBUG_P(std::cout << "sending file to client\n");
+  if (!clientSocket.writeHeaderAndData(message.data(), audioData.data(), audioData.size())) {
+    t.socketFD *= -1;
+  } else {
+    t.p_entry->sent++;
+  }
 
   ::write(threadSendPipe[1], reinterpret_cast<const void *>(&t), sizeof t);
 }
 
 void Room::sendSongToAllClients(const RecvPipeData_t &next) {
   DEBUG_P(std::cout << "sending song to all clients\n");
-  if (next.p_queue == nullptr) {
+  if (next.p_entry == nullptr) {
     DEBUG_P(std::cout << "song is nullptr\n");
     return;
   }
-  if (next.p_queue->sent != 0) {
+  if (next.p_entry->sent != 0) {
     DEBUG_P(std::cout << "song has already been sent, no need to send again\n");
     return;
   }
-  if (!next.p_queue->entryMutex.try_lock()) {
+  if (!next.p_entry->entryMutex.try_lock()) {
     DEBUG_P(std::cout << "could not get mutex for song\n");
     return;
   }
   // 0 means we haven't started sending yet
   // 1 means that we have started sending, sent - 1 is the number of clients that it has been sent to
-  next.p_queue->sent = 1;
+  next.p_entry->sent = 1;
   if (clients.empty() || (clients.size() == 1 && next.socketFD == clients.front().getSocket().getSocketFD())) {
     DEBUG_P(std::cout << "no one to send to\n");
-    next.p_queue->entryMutex.unlock();
+    next.p_entry->entryMutex.unlock();
     attemptPlayNext();
   } else {
     Music m;
-    m.setPath(next.p_queue->path);
+    m.setPath(next.p_entry->path);
     auto data = m.getMemShared();
-    next.p_queue->entryMutex.unlock();
-    int position = queue.getPositionInQueue(next.p_queue);
+    next.p_entry->entryMutex.unlock();
+    int position = queue.getPositionInQueue(next.p_entry);
     if (position == -1) {
       std::cerr << "Error: entry not found\n";
       return;
@@ -282,7 +264,7 @@ void Room::sendSongToAllClients(const RecvPipeData_t &next) {
           &Room::sendSongDataToClient_threaded,
           this,
           data,
-          next.p_queue,
+          next.p_entry,
           static_cast<uint8_t>(position),
           &client
         );
@@ -334,34 +316,17 @@ void Room::attemptPlayNext() {
   }
 }
 
-void Room::handleClientReqAddQueueHelper_threaded(room::Client* p_client, MusicStorageEntry *p_queue) {
+void Room::handleClientReqSongData_threaded(room::Client *p_client, uint32_t sizeOfFile) {
   ThreadSafeSocket &socket = p_client->getSocket();
   RecvPipeData_t t {
     socket.getSocketFD(),
-    p_queue
+    p_client->p_entry
   };
 
-  auto process = [this, &socket, &t]() {
-    DEBUG_P(std::cout << "res ok, now waiting for song\n");
+  auto process = [this, &socket, &t, sizeOfFile]() {
+    DEBUG_P(std::cout << "res ok, now getting the song\n");
     // read in the header, create message object from it
-    std::byte requestHeader[6];
-    {
-      const auto numBytesRead = static_cast<uint32_t>(socket.readAll(requestHeader,  sizeof requestHeader));
-      if (numBytesRead <= 0) {
-        // either client disconnected half way through, or some other error. Scrap it
-        DEBUG_P(std::cout << "error reading song from socket, removing entry from queue\n");
-        queue.removeByAddress(t.p_queue);
-        t.p_queue = nullptr;
-        // make FD negative to tell parent thread we need to remove the client
-        t.socketFD *= -1;
-        return;
-      }
-    }
-
-    const Message message(requestHeader);
-
     // get size of message from message object
-    const uint32_t sizeOfFile = message.getBodySize();
     DEBUG_P(std::cout << "got header, now reading in file of size " << sizeOfFile << "\n");
     Music music;
     music.getVector().resize(sizeOfFile);
@@ -371,15 +336,15 @@ void Room::handleClientReqAddQueueHelper_threaded(room::Client* p_client, MusicS
     if (numBytesRead <= 0) {
       // either client disconnected half way through, or some other error. Scrap it
       DEBUG_P(std::cout << "error reading song from socket, removing entry from queue\n");
-      queue.removeByAddress(t.p_queue);
-      t.p_queue = nullptr;
+      queue.removeByAddress(t.p_entry);
+      t.p_entry = nullptr;
       // make FD negative to tell parent thread we need to remove the client
       t.socketFD *= -1;
       return;
     }
-    music.setPath(t.p_queue->path);
+    music.setPath(t.p_entry->path);
     music.writeToPath();
-    t.p_queue->entryMutex.unlock();
+    t.p_entry->entryMutex.unlock();
     DEBUG_P(std::cout << "unlocked queueEntry mutex\n");
   };
 
@@ -393,9 +358,9 @@ void Room::handleClientReqAddQueueHelper_threaded(room::Client* p_client, MusicS
 void Room::handleClientReqAddQueue(room::Client &client) {
   DEBUG_P(std::cout << "req add to queue request\n");
 
-  auto p_queue = this->queue.addAndLockEntry();
+  auto p_entry = this->queue.addAndLockEntry();
 
-  if (p_queue == nullptr) {
+  if (p_entry == nullptr) {
     // adding to queue was unsuccessful
     // send a message back to client to deny their request to add a song
     sendBasicResponse(client.getSocket(), Command::RES_ADD_TO_QUEUE_NOT_OK);
@@ -405,23 +370,31 @@ void Room::handleClientReqAddQueue(room::Client &client) {
 
   // adding to the queue was successful
   // send a message back to client to confirm that they can continue to send the song
-  int position = queue.getPositionInQueue(p_queue);
+  int position = queue.getPositionInQueue(p_entry);
   if (position == -1) {
     std::cerr << "Error: couldn't find the entry\n";
     exit(1);
   }
+  client.p_entry = p_entry;
   sendBasicResponse(client.getSocket(), Command::RES_ADD_TO_QUEUE_OK, static_cast<std::byte>(position));
+  DEBUG_P(std::cout << "res ok\n");
+}
 
-  // remove the socket from the master list since we want only the thread to read from it.
-  // we add it back once the thread is finished executing
-  FD_CLR(client.getSocket().getSocketFD(), &master);
-  std::thread clientThread = std::thread(
-    &Room::handleClientReqAddQueueHelper_threaded,
-    this,
-    &client,
-    p_queue
-  );
-  clientThread.detach();
+void Room::handleCancelReqAddQueue(MusicStorageEntry *p_entry) {
+  if (p_entry == nullptr) {
+    return;
+  }
+  const int position = queue.getPositionInQueue(p_entry);
+  if (position < 0) {
+    return;
+  }
+  queue.removeByAddress(p_entry);
+  Message message;
+  message.setCommand(Command::REMOVE_QUEUE_ENTRY);
+  message.setOptions(static_cast<std::byte>(position));
+  for (room::Client &client : clients) {
+    client.getSocket().write(message.data(), message.size());
+  }
 }
 
 bool Room::handleClientRequests(room::Client &client) {
@@ -434,11 +407,35 @@ bool Room::handleClientRequests(room::Client &client) {
   // convert header to message
   Message message(requestHeader);
   // handle every supported message here
-  auto command = static_cast<Command>(message.getCommand());
+  Command command = message.getCommand();
   switch(command) {
-    case Command::REQ_ADD_TO_QUEUE: {
+    case Command::REQ_ADD_TO_QUEUE:
       handleClientReqAddQueue(client);
       break;
+
+    case Command::RECV_OK:
+      DEBUG_P(std::cout << "got recv ok from client\n");
+      attemptPlayNext();
+      break;
+
+    case Command::CANCEL_REQ_ADD_TO_QUEUE:
+      handleCancelReqAddQueue(client.p_entry);
+      client.p_entry = nullptr;
+      break;
+
+    case Command::SONG_DATA: {
+      if (client.p_entry == nullptr) {
+        // client does not have a spot in the queue
+        break;
+      }
+      FD_CLR(client.getSocket().getSocketFD(), &master);
+      std::thread clientThread = std::thread(
+        &Room::handleClientReqSongData_threaded,
+        this,
+        &client,
+        message.getBodySize()
+      );
+      clientThread.detach();
     }
 
     default:
@@ -496,26 +493,25 @@ void Room::handleConnectionRequests() {
 }
 
 void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
-  auto process = [&queueEntry, this]() {
+  RecvPipeData_t t{0, queueEntry};
+  auto process = [&t, this]() {
     Music m;
     getMP3FilePath(m);
     if (m.getPath() == "-1") {
-      queue.removeByAddress(queueEntry);
-      queueEntry = nullptr;
-      // TODO: send cancel command to all clients
+      handleCancelReqAddQueue(t.p_entry);
+      t.p_entry = nullptr;
       return;
     }
-    queueEntry->path = m.getPath();
-    queueEntry->entryMutex.unlock();
+    t.p_entry->path = m.getPath();
+    t.p_entry->entryMutex.unlock();
     DEBUG_P(std::cout << "unlocked entry mutex\n");
     std::cout << "Added song to queue\n";
   };
 
-  if (queueEntry != nullptr) {
+  if (t.p_entry != nullptr) {
     process();
   }
 
-  RecvPipeData_t t{0, queueEntry};
   DEBUG_P(std::cout << "add local song to queue process done, writing to recv pipe: socketFD " << t.socketFD << "\n");
   ::write(threadRecvPipe[1], reinterpret_cast<const void *>(&t), sizeof t);
 

@@ -135,13 +135,36 @@ const std::list<MusicStorageEntry> &MusicStorage::getSongs() const {
 }
 
 void MusicStorage::removeByAddress(const MusicStorageEntry *musicAddress) {
+  if (musicAddress == nullptr) {
+    return;
+  }
   DEBUG_P(std::cout << "waiting for queue mutex\n");
-  musicStorageMutex.lock();
+  std::unique_lock<std::mutex> lock(musicStorageMutex);
   DEBUG_P(std::cout << "got queue mutex\n");
   songs.remove_if([musicAddress](const MusicStorageEntry &song){
     return &song == musicAddress;
   });
-  musicStorageMutex.unlock();
+  DEBUG_P(std::cout << "unlocked queue mutex\n");
+}
+
+void MusicStorage::removeByPosition(uint8_t position) {
+  if (position < 0 || position > MAX_SONGS - 1) {
+    return;
+  }
+  DEBUG_P(std::cout << "waiting for queue mutex\n");
+  std::unique_lock<std::mutex> lock(musicStorageMutex);
+  DEBUG_P(std::cout << "got queue mutex\n");
+  uint8_t i = 0;
+  auto iter = songs.begin();
+  while (iter != songs.end()) {
+    if (i == position) {
+      songs.erase(iter);
+      DEBUG_P(std::cout << "unlocked queue mutex\n");
+      return;
+    }
+    ++i;
+    ++iter;
+  }
   DEBUG_P(std::cout << "unlocked queue mutex\n");
 }
 

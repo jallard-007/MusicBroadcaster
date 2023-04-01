@@ -21,12 +21,12 @@ enum class Command : std::underlying_type_t<std::byte> {
     FIND_ROOM, /* Tries to find the room */
 
     REQ_ADD_TO_QUEUE, /* client asks room if it can queue a song */
+    CANCEL_REQ_ADD_TO_QUEUE, /* client asks room if it can queue a song */
                       /* example: REQ_ADD_TO_QUEUE <options byte> <4 bytes size of whole audio file> */
     RES_ADD_TO_QUEUE_OK,
     RES_ADD_TO_QUEUE_NOT_OK,
 
-    ADD_EMPTY_TO_QUEUE, /* from server to client: add an empty spot in the queue */
-
+    REMOVE_QUEUE_ENTRY,
     /* message contains song data
      * should only be sent if received an ok after REQ_ADD_TO_QUEUE
      * example: SONG_DATA <option byte> <4 bytes size of body> <body>

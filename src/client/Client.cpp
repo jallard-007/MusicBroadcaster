@@ -40,6 +40,8 @@ bool Client::initializeClient() {
   return true;
 }
 
+// TODO: multithread client side. need to ensure expected send/receive order is kept.
+// TODO: if interrupted by server that requires a message to be printed, take what was written and put it back on command line after
 void Client::handleClient() {
   std::cout << " >> ";
   std::cout.flush();
@@ -233,6 +235,12 @@ bool Client::handleServerMessage() {
       std::cout << "The room is not allowing you to upload, try again later\n";
       break;
 
+    case Commands::Command::REMOVE_QUEUE_ENTRY: {
+      DEBUG_P(std::cout << "remove by position " << (int)mes.getOptions() << '\n');
+      queue.removeByPosition(static_cast<uint8_t>(mes.getOptions()));
+      break;
+    }
+
     default:
       break;
   }
@@ -257,21 +265,22 @@ void Client::sendMusicFile(uint8_t position) {
   DEBUG_P(std::cout << "sendMusicFile\n");
   Music m;
   MusicStorageEntry *p_entry = queue.addAtIndexAndLock(position);
-  auto process = [this, &p_entry, &m]() {
-    getMP3FilePath(m);
-    if (m.getPath() == "-1") {
-      queue.removeByAddress(p_entry);
-      p_entry = nullptr;
-      // TODO: need to add cancel command, so that client thread on server side does not freeze
-      return;
+  getMP3FilePath(m);
+  if (m.getPath() == "-1") {
+    Message header;
+    header.setCommand((std::byte)Commands::Command::CANCEL_REQ_ADD_TO_QUEUE);
+    if (!clientSocket.writeHeaderAndData(header.data(), m.getVector().data(), m.getVector().size())) {
+      DEBUG_P(std::cout << "couldn't send \n");
+      std::cerr << "There was an issue communicating the with server\n";
+      exit(1);
     }
-    m.readFileAtPath();
-    p_entry->path = m.getPath();
-    p_entry->entryMutex.unlock();
-    DEBUG_P(std::cout << "unlocked entry mutex\n");
-  };
+    return;
+  }
 
-  process();
+  m.readFileAtPath();
+  p_entry->path = m.getPath();
+  p_entry->entryMutex.unlock();
+  DEBUG_P(std::cout << "unlocked entry mutex\n");
 
   Message header;
   header.setCommand((std::byte)Commands::Command::SONG_DATA);

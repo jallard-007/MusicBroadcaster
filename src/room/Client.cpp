@@ -7,10 +7,10 @@
 
 #include "Client.hpp"
 
-room::Client::Client(): sendingCount{}, name{}, socket{} {}
+room::Client::Client(): sendingCount{}, p_entry{}, name{}, socket{} {}
 
 room::Client::Client(std::string name, ThreadSafeSocket &&socket):
-  sendingCount{}, name{std::move(name)}, socket{std::move(socket)} {}
+  sendingCount{}, p_entry{}, name{std::move(name)}, socket{std::move(socket)} {}
 
 room::Client::Client(Client &&moved) noexcept:
   sendingCount{}, name{std::move(moved.name)}, socket{std::move(moved.socket)} {}

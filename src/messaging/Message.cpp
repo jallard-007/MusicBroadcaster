@@ -31,8 +31,8 @@ const std::byte *Message::data() {
 }
 
 /* Gets the command */
-std::byte Message::getCommand() const {
-    return contents[INDEX_COMMAND];
+Commands::Command Message::getCommand() const {
+    return static_cast<Commands::Command>(contents[INDEX_COMMAND]);
 }
 
 /* Returns the options */

@@ -68,6 +68,9 @@ public:
    * Removes a music object by its address in memory
   */
   void removeByAddress(const MusicStorageEntry *);
+  
+  void removeByPosition(uint8_t);
+
 };
 
 

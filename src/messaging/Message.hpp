@@ -83,7 +83,7 @@ public:
    * 
    * @return std::byte
    */
-  [[nodiscard]] std::byte getCommand() const;
+  [[nodiscard]] Commands::Command getCommand() const;
 
   /**
    * @brief Get the Options object
