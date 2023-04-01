@@ -15,7 +15,8 @@
 
 #include "Music.hpp"
 
-#define MAX_SONGS 10
+// ABSOLUTE max is the max number representable by the size of 'option' in Message class, so currently 255 (1 byte)
+#define MAX_SONGS 50
 
 /**
  * Storage class for music objects. Not fully implemented and integrated with room class
@@ -46,26 +47,27 @@ public:
   MusicStorage();
   ~MusicStorage();
 
-  /**
-   * Removes a music object by its address in memory
-  */
-  void removeByAddress(const MusicStorageEntry *);
 
-  MusicStorageEntry *getFirstEmptyAndLockEntry();
+  MusicStorageEntry *addAtIndexAndLock(uint8_t index);
 
-  MusicStorageEntry *addEmpty();
+  static bool makeTemp(MusicStorageEntry *);
 
   MusicStorageEntry *addAndLockEntry();
 
   MusicStorageEntry *addLocalAndLockEntry();
 
+  int getPositionInQueue(const MusicStorageEntry *) const;
+
   [[nodiscard]] MusicStorageEntry *getFront();
 
-  bool hasPreviousBeenSent(MusicStorageEntry *);
+  [[nodiscard]] const std::list<MusicStorageEntry> &getSongs() const;
 
   void removeFront();
 
-  [[nodiscard]] const std::list<MusicStorageEntry> &getSongs() const;
+  /**
+   * Removes a music object by its address in memory
+  */
+  void removeByAddress(const MusicStorageEntry *);
 };
 
 

@@ -17,6 +17,9 @@ private:
   std::string name;
   std::string path;
   std::vector<std::byte> bytes;
+
+  static size_t validateFile(FILE *fp);
+  static size_t validateFileSilent(FILE *fp);
 public:
   Music() = default;
   ~Music() = default;
@@ -37,7 +40,7 @@ public:
    * Attempts to read the file at Music::path and store the contents in Music::bytes
    * @returns true on success, false otherwise
   */
-  bool readFileAtPath();
+  bool readFileAtPath(size_t (*)(FILE *) = &validateFile);
 
   /**
    * Attemps to read the file at Music::path and store the contents in Music::bytes
@@ -49,7 +52,6 @@ public:
    * Setters and getters
   */
 
-  static size_t validateFile(FILE *fp);
   bool validateFileAtPath();
  
   [[nodiscard]] const std::string &getName() const;

@@ -29,17 +29,6 @@ MusicStorage::~MusicStorage() {
   }
 }
 
-void MusicStorage::removeByAddress(const MusicStorageEntry *musicAddress) {
-  DEBUG_P(std::cout << "waiting for queue mutex\n");
-  musicStorageMutex.lock();
-  DEBUG_P(std::cout << "got queue mutex\n");
-  songs.remove_if([musicAddress](const MusicStorageEntry &song){
-    return &song == musicAddress;
-  });
-  musicStorageMutex.unlock();
-  DEBUG_P(std::cout << "unlocked queue mutex\n");
-}
-
 MusicStorageEntry *MusicStorage::add(const std::string &path, int fd) {
   DEBUG_P(std::cout << "waiting for queue mutex\n");
   musicStorageMutex.lock();
@@ -52,44 +41,57 @@ MusicStorageEntry *MusicStorage::add(const std::string &path, int fd) {
   return &p_entry;
 }
 
-MusicStorageEntry *MusicStorage::getFirstEmptyAndLockEntry() {
-  if (songs.size() >= MAX_SONGS) {
-    return nullptr;
+MusicStorageEntry *MusicStorage::addAtIndexAndLock(uint8_t index) {
+  DEBUG_P(std::cout << "adding at index [" << (int)index << "]\n");
+  if (index > MAX_SONGS - 1) {
+    std::cerr << "Request to add song at index past max songs (" << MAX_SONGS << ")\n";
+    exit(1);
+  }
+
+  if (songs.empty() || songs.size() - 1 < index) {
+    DEBUG_P(std::cout << "need to add entries to reach index \n");
+    DEBUG_P(std::cout << "waiting for queue mutex\n");
+    std::unique_lock<std::mutex> lock{musicStorageMutex};
+    DEBUG_P(std::cout << "got queue mutex\n");
+    do {
+      songs.emplace_back(0, "");
+    } while (songs.size() - 1 < index);
+    auto &back = songs.back();
+    back.entryMutex.lock();
+    DEBUG_P(std::cout << "got entry mutex\n");
+    DEBUG_P(std::cout << "unlocked queue mutex\n");
+    return &back;
+  }
+  DEBUG_P(std::cout << "no need to add entries\n");
+  auto iter = songs.begin();
+  for (int i = 0; i < index; ++i, ++iter);
+  if (!iter->entryMutex.try_lock()) {
+    std::cerr << "could not get entry lock, there's an issue with the code\n";
+    exit(1);
+  }
+  DEBUG_P(std::cout << "got entry mutex\n");
+  return &*iter;
+}
+
+bool MusicStorage::makeTemp(MusicStorageEntry *p_entry) {
+  if (p_entry == nullptr) {
+    return false;
   }
   char s[] = "/tmp/musicBroadcaster_XXXXXX";
   int filedes = mkstemp(s);
   if (filedes < 1) {
-    return nullptr;
+    return false;
   }
-  DEBUG_P(std::cout << "waiting for queue mutex\n");
-  musicStorageMutex.lock();
-  DEBUG_P(std::cout << "got queue mutex\n");
-  for (MusicStorageEntry &entry : songs) {
-    if (entry.path.empty() && entry.entryMutex.try_lock()) {
-      DEBUG_P(std::cout << "got entry mutex\n");
-      entry.path = s;
-      entry.fd = filedes;
-      musicStorageMutex.unlock();
-      DEBUG_P(std::cout << "unlocked queue mutex\n");
-      return &entry;
-    }
-  }
-  auto &p_entry = songs.emplace_back(filedes, s);
-  p_entry.entryMutex.lock();
-  DEBUG_P(std::cout << "got entry mutex\n");
-  musicStorageMutex.unlock();
-  DEBUG_P(std::cout << "unlocked queue mutex\n");
-  return &p_entry;
+  p_entry->path = s;
+  p_entry->fd = filedes;
+  return true;
 }
 
-MusicStorageEntry *MusicStorage::addEmpty() {
-  DEBUG_P(std::cout << "waiting for queue mutex\n");
-  musicStorageMutex.lock();
-  DEBUG_P(std::cout << "got queue mutex\n");
-  auto &p_entry = songs.emplace_back(0, "");
-  musicStorageMutex.unlock();
-  DEBUG_P(std::cout << "unlocked queue mutex\n");
-  return &p_entry;
+MusicStorageEntry *MusicStorage::addLocalAndLockEntry() {
+  if (songs.size() >= MAX_SONGS) {
+    return nullptr;
+  }
+  return add("path", -1);
 }
 
 MusicStorageEntry *MusicStorage::addAndLockEntry() {
@@ -104,33 +106,11 @@ MusicStorageEntry *MusicStorage::addAndLockEntry() {
   return add(s, filedes);
 }
 
-MusicStorageEntry *MusicStorage::addLocalAndLockEntry() {
-  if (songs.size() >= MAX_SONGS) {
-    return nullptr;
-  }
-  return add("path", -1);
-}
-
 MusicStorageEntry *MusicStorage::getFront() {
   if (songs.empty()) {
     return nullptr;
   }
   return &songs.front();
-}
-
-bool MusicStorage::hasPreviousBeenSent(MusicStorageEntry *curr) {
-  auto iter = songs.begin();
-  while (iter != songs.end()) {
-    if (&*iter == curr) {
-      if (&songs.front() != curr) {
-        return (--iter)->sent > 0;
-      } else {
-        return true;
-      }
-    }
-    ++iter;
-  }
-  return true;
 }
 
 void MusicStorage::removeFront() {
@@ -145,10 +125,33 @@ void MusicStorage::removeFront() {
     remove(songs.front().path.c_str());
   }
   songs.pop_front();
+  DEBUG_P(std::cout << "deleted front entry\n");
   musicStorageMutex.unlock();
   DEBUG_P(std::cout << "unlocked queue mutex\n");
 }
 
 const std::list<MusicStorageEntry> &MusicStorage::getSongs() const {
   return songs;
+}
+
+void MusicStorage::removeByAddress(const MusicStorageEntry *musicAddress) {
+  DEBUG_P(std::cout << "waiting for queue mutex\n");
+  musicStorageMutex.lock();
+  DEBUG_P(std::cout << "got queue mutex\n");
+  songs.remove_if([musicAddress](const MusicStorageEntry &song){
+    return &song == musicAddress;
+  });
+  musicStorageMutex.unlock();
+  DEBUG_P(std::cout << "unlocked queue mutex\n");
+}
+
+int MusicStorage::getPositionInQueue(const MusicStorageEntry *p_find) const {
+  uint8_t i = 0;
+  for (const MusicStorageEntry &entry : songs) {
+    if (&entry == p_find) {
+      return static_cast<int>(i);
+    }
+    ++i;
+  }
+  return -1;
 }

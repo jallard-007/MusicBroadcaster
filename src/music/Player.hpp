@@ -74,6 +74,8 @@ public:
   */
   void wait();
 
+  void mute();
+
   void seek(float time);
 
   bool isPlaying();

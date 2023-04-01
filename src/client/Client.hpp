@@ -26,7 +26,7 @@ private:
   */
   void reqSendMusicFile();
 
-  void sendMusicFile();
+  void sendMusicFile(uint8_t);
 
   bool handleStdinCommand();
 

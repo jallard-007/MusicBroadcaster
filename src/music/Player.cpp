@@ -73,6 +73,10 @@ void Player::wait() {
   }
 }
 
+void Player::mute() {
+  out123_param(ao, OUT123_ADD_FLAGS, OUT123_MUTE, 0, nullptr);
+}
+
 bool Player::isPlaying() {
   return shouldPlay;
 }
@@ -86,7 +90,6 @@ void Player::seek(float time) {
 
 void Player::_play() {
   std::size_t done;
-  size_t played;
   int err;
   while (shouldPlay) {
     // decode audio
@@ -102,7 +105,7 @@ void Player::_play() {
       shouldPlay = false;
     }
     // play the audio
-    if ((played = out123_play(ao, outBuffer, done)) != done) {
+    if (out123_play(ao, outBuffer, done) != done) {
       // try to finish playing
       //out123_play(ao, outBuffer + played, done - played);
     }

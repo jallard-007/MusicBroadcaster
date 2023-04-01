@@ -18,9 +18,15 @@
 #include "../socket/ThreadSafeSocket.hpp"
 
 typedef struct {
-    int socketFD;
-    MusicStorageEntry *p_queue;
-} PipeData_t;
+  int socketFD;
+  room::Client *p_client;
+  MusicStorageEntry *p_queue;
+} SendPipeData_t;
+
+typedef struct {
+  int socketFD;
+  MusicStorageEntry *p_queue;
+} RecvPipeData_t;
 
 class Room {
 private:
@@ -121,13 +127,17 @@ private:
   /**
    * Sends song data to a specific client
   */
-  void sendSongDataToClient_threaded(std::shared_ptr<Music> audio, const MusicStorageEntry *p_queue, ThreadSafeSocket &clientSocket);
+  void sendSongDataToClient_threaded(
+    std::shared_ptr<Music> audio,
+    const MusicStorageEntry *p_queue,
+    uint8_t queuePosition,
+    room::Client *p_client
+  );
 
   /**
    * Attempts to send the next song to all clients client
   */
-  void sendSongToAllClients(const PipeData_t &);
-
+  void sendSongToAllClients(const RecvPipeData_t &);
 
   void waitOnAudio_threaded();
 

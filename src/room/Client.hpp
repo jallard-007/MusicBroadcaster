@@ -20,7 +20,10 @@ namespace room {
    * Doesn't actually do anything, just holds information
   */
   class Client {
+  public:
+    int sendingCount;
   private:
+
 
     /**
      * name of client
@@ -31,8 +34,6 @@ namespace room {
      * socket associated with the client
     */
     ThreadSafeSocket socket;
-
-    bool handleServerSongData();
 
   public:
     Client();
@@ -68,6 +69,7 @@ namespace room {
      * Getter for socket
     */
     ThreadSafeSocket &getSocket();
+
   };
 
 }

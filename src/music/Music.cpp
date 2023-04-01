@@ -7,7 +7,6 @@
 #include <fstream>
 #include <utility>
 #include <vector>
-#include <unistd.h>
 #include "Music.hpp"
 
 Music::Music(std::string songName):
@@ -41,6 +40,21 @@ size_t Music::validateFile(FILE *fp) {
   return fileSize;
 }
 
+size_t Music::validateFileSilent(FILE *fp) {
+  if (fp == nullptr) {
+    return 0;
+  }
+  fseek(fp, 0L, SEEK_END); // go to the end of the file
+  const auto fileSize = (size_t)ftell(fp); // tell us the current position (this tells us the size of the file)
+  if (fileSize > MAX_FILE_SIZE_BYTES) {
+    return 0;
+  }
+  if (fileSize == 0) {
+    return 0;
+  }
+  return fileSize;
+}
+
 bool Music::validateFileAtPath() {
   FILE *fp = fopen(path.c_str(), "r");
   
@@ -51,9 +65,9 @@ bool Music::validateFileAtPath() {
   return valid > 0;
 }
 
-bool Music::readFileAtPath() {
+bool Music::readFileAtPath(size_t (*validator)(FILE *)) {
   FILE *fp = fopen(path.c_str(), "r");
-  size_t fileSize = validateFile(fp);
+  size_t fileSize = validator(fp);
   if (fileSize == 0) {
     return false;
   }
@@ -76,7 +90,9 @@ void Music::writeToPath() {
 std::shared_ptr<Music> Music::getMemShared() const {
   auto music = std::make_shared<Music>();
   music->setPath(path);
-  music->readFileAtPath();
+  if (music->readFileAtPath(&Music::validateFileSilent) == 0) {
+    return nullptr;
+  }
   return music;
 }
 

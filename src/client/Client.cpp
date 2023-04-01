@@ -155,6 +155,11 @@ bool Client::handleServerSongData(Message &mes) {
   DEBUG_P(std::cout << "song data message from server of size" << mes.getBodySize() << "\n");
   Music music;
   music.getVector().resize(mes.getBodySize());
+  auto musicEntry = queue.addAtIndexAndLock(static_cast<uint8_t>(mes.getOptions()));
+  if (!queue.makeTemp(musicEntry)) {
+    std::cerr << "Error: makeTemp\n";
+    exit(1);
+  }
   // will want to eventually thread this off
   if (clientSocket.readAll(music.getVector().data(), mes.getBodySize()) == 0) {
     std::cerr << "lost connection to room\n";
@@ -168,12 +173,6 @@ bool Client::handleServerSongData(Message &mes) {
     clientSocket.write(response.data(), response.size());
   }
   DEBUG_P(std::cout << "sent back ok\n");
-
-  auto musicEntry = queue.getFirstEmptyAndLockEntry();
-  if (musicEntry == nullptr) {
-    DEBUG_P(std::cout << "de-synced with server");
-    exit(1);
-  }
 
   // write the data to disk
   music.setPath(musicEntry->path);
@@ -224,20 +223,15 @@ bool Client::handleServerMessage() {
       break;
     }
 
-    case Commands::Command::ADD_EMPTY_TO_QUEUE: {
-      queue.addEmpty();
+    case Commands::Command::RES_ADD_TO_QUEUE_OK: {
+      DEBUG_P(std::cout << "got ok\n");
+      sendMusicFile(static_cast<uint8_t>(mes.getOptions()));
       break;
     }
 
-    case Commands::Command::RES_ADD_TO_QUEUE: {
-      std::byte option = mes.getOptions();
-      if (option == RES_ADD_TO_QUEUE_OK) {
-        DEBUG_P(std::cout << "got ok\n");
-        sendMusicFile();
-      } else{
-        std::cout << "The room is not allowing you to upload, try again later\n";
-      }
-    }
+    case Commands::Command::RES_ADD_TO_QUEUE_NOT_OK:
+      std::cout << "The room is not allowing you to upload, try again later\n";
+      break;
 
     default:
       break;
@@ -259,9 +253,10 @@ void Client::reqSendMusicFile() {
   }
 }
 
-void Client::sendMusicFile() {
+void Client::sendMusicFile(uint8_t position) {
+  DEBUG_P(std::cout << "sendMusicFile\n");
   Music m;
-  MusicStorageEntry *p_entry = queue.addLocalAndLockEntry();
+  MusicStorageEntry *p_entry = queue.addAtIndexAndLock(position);
   auto process = [this, &p_entry, &m]() {
     getMP3FilePath(m);
     if (m.getPath() == "-1") {
