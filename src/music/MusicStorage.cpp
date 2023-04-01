@@ -8,11 +8,10 @@
 #include <unistd.h>
 
 #include "../debug.hpp"
-#include "Music.hpp"
 #include "MusicStorage.hpp"
 
 MusicStorageEntry::MusicStorageEntry():
-  sent{false}, fd{0}, path{""},  entryMutex{} {}
+  sent{false}, fd{0}, path{},  entryMutex{} {}
 
 MusicStorageEntry::MusicStorageEntry(int i, std::string s):
   sent{false}, fd{i}, path{std::move(s)},  entryMutex{} {}
@@ -66,7 +65,7 @@ MusicStorageEntry *MusicStorage::getFirstEmptyAndLockEntry() {
   musicStorageMutex.lock();
   DEBUG_P(std::cout << "got queue mutex\n");
   for (MusicStorageEntry &entry : songs) {
-    if (entry.path == "" && entry.entryMutex.try_lock()) {
+    if (entry.path.empty() && entry.entryMutex.try_lock()) {
       DEBUG_P(std::cout << "got entry mutex\n");
       entry.path = s;
       entry.fd = filedes;
@@ -113,7 +112,7 @@ MusicStorageEntry *MusicStorage::addLocalAndLockEntry() {
 }
 
 MusicStorageEntry *MusicStorage::getFront() {
-  if (songs.size() == 0) {
+  if (songs.empty()) {
     return nullptr;
   }
   return &songs.front();

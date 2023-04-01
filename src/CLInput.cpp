@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+
 #include "CLInput.hpp"
 
 uint16_t getPort() {
@@ -24,5 +25,26 @@ void getHost(std::string &input) {
       return;
     }
     std::cout << "Error: not a valid host\n";
+  }
+}
+
+void getMP3FilePath(Music &m) {
+  std::string input;
+  while (true) {
+    std::cout << "Enter file path (-1 to cancel):\n >> ";
+    std::getline(std::cin, input);
+    if (input == "-1") {
+      m.setPath(input);
+      return;
+    }
+    if (input.length() < 5 || input.substr(input.length() - 4) != ".mp3") {
+      std::cerr << "Error: not a valid mp3 file\n";
+      continue;
+    }
+    m.setPath(input);
+    if (!m.validateFileAtPath()) {
+      continue;
+    }
+    return;
   }
 }

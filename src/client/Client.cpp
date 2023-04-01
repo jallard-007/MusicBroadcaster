@@ -18,11 +18,11 @@
 #include "../messaging/Message.hpp"
 
 Client::Client():
-  shouldRemoveFirstOnNext{false}, id{}, fdMax{}, clientName{},
+  shouldRemoveFirstOnNext{false}, clientName{},
   queue{}, audioPlayer{}, master{}, clientSocket{} {}
 
 Client::Client(std::string name):
-  shouldRemoveFirstOnNext{false}, id{}, fdMax{}, clientName{std::move(name)},
+  shouldRemoveFirstOnNext{false}, clientName{std::move(name)},
   queue{}, audioPlayer{}, master{}, clientSocket{} {}
 
 bool Client::initializeClient() {
@@ -32,8 +32,6 @@ bool Client::initializeClient() {
   if (!clientSocket.connect(host, port)) {
     return false;
   }
-
-  fdMax = clientSocket.getSocketFD();
 
   FD_ZERO(&master);
   FD_SET(0, &master);
@@ -47,7 +45,7 @@ void Client::handleClient() {
   std::cout.flush();
   while (true) {
     fd_set read_fds = master;  // temp file descriptor list for select()
-    if (::select(fdMax + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
+    if (::select(clientSocket.getSocketFD() + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
       fprintf(stderr, "select: %s (%d)\n", strerror(errno), errno);
       return;
     }
@@ -153,68 +151,76 @@ bool Client::handleStdinCommand() {
   return true;
 }
 
+bool Client::handleServerSongData(uint32_t size) {
+  DEBUG_P(std::cout << "song data message from server of size" << size << "\n");
+  Music music;
+  music.getVector().resize(size);
+  // will want to eventually thread this off
+  if (clientSocket.readAll(music.getVector().data(), size) == 0) {
+    std::cerr << "lost connection to room\n";
+    return false;
+  }
+  DEBUG_P(std::cout << "got song data\n");
+
+  { // send received ok response to server
+    Message response;
+    response.setCommand((std::byte)Commands::Command::RECV_OK);
+    clientSocket.write(response.data(), response.size());
+  }
+  DEBUG_P(std::cout << "sent back ok\n");
+
+  auto musicEntry = queue.getFirstEmptyAndLockEntry();
+  if (musicEntry == nullptr) {
+    DEBUG_P(std::cout << "de-synced with server");
+    exit(1);
+  }
+
+  // write the data to disk
+  music.setPath(musicEntry->path);
+  music.writeToPath();
+  musicEntry->entryMutex.unlock();
+  return true;
+}
+
+void Client::handleServerPlayNext() {
+  DEBUG_P(std::cout << "play next message from server\n");
+  if (audioPlayer.isPlaying()) {
+    audioPlayer.pause();
+  }
+  if (shouldRemoveFirstOnNext) {
+    DEBUG_P(std::cout << "remove front first\n");
+    queue.removeFront();
+  }
+  auto nextSongFileName = queue.getFront();
+
+  if (nextSongFileName != nullptr) {
+    DEBUG_P(std::cout << "feeding next\n");
+    audioPlayer.feed(nextSongFileName->path.c_str());
+    audioPlayer.play();
+    shouldRemoveFirstOnNext = true;
+  } else {
+    DEBUG_P(std::cout << "nothing to feed\n");
+    shouldRemoveFirstOnNext = false;
+  }
+}
+
 bool Client::handleServerMessage() {
-  std::byte responseHeader[6];
-  if (clientSocket.readAll(responseHeader, 6) == 0){
+  std::byte responseHeader[SIZE_OF_HEADER];
+  if (clientSocket.readAll(responseHeader, SIZE_OF_HEADER) == 0){
     audioPlayer.pause();
     std::cout << "lost connection to room\n";
     return false;
   }
   Message mes(responseHeader);
-  const uint32_t size = mes.getBodySize();
   const auto command = static_cast<Commands::Command>(mes.getCommand());
   switch (command) {
     // always take the next queue entry, if there are none available, add one
     case Commands::Command::SONG_DATA: {
-      DEBUG_P(std::cout << "song data message from server of size" << size << "\n");
-      Music music;
-      music.getVector().resize(size);
-      // will want to eventually thread this off
-      if (clientSocket.readAll(music.getVector().data(), size) == 0) {
-        audioPlayer.pause();
-        std::cout << "lost connection to room\n";
-        return false;
-      }
-      DEBUG_P(std::cout << "got song data\n");
-      { // send received ok response to server
-        Message response;
-        response.setCommand((std::byte)Commands::Command::RECV_OK);
-        clientSocket.write(response.data(), response.size());
-      }
-      DEBUG_P(std::cout << "sent back ok\n");
-      auto musicEntry = queue.getFirstEmptyAndLockEntry();
-      // write the data to disk
-      if (musicEntry != nullptr) {
-        music.setPath(musicEntry->path.c_str());
-        music.writeToPath();
-        musicEntry->entryMutex.unlock();
-      } else {
-        // we got a problem
-      }
-      break;
+      return handleServerSongData(mes.getBodySize());
     }
     
     case Commands::Command::PLAY_NEXT: {
-      DEBUG_P(std::cout << "play next message from server\n");
-      if (audioPlayer.isPlaying()) {
-        audioPlayer.pause();
-      }
-      if (shouldRemoveFirstOnNext) {
-        DEBUG_P(std::cout << "remove front first\n");
-        queue.removeFront();
-      }
-      // TODO: need to check if there was a previous song that finished then remove it from the queue
-      auto nextSongFileName = queue.getFront();
-
-      if (nextSongFileName != nullptr) {
-        DEBUG_P(std::cout << "feeding next\n");
-        audioPlayer.feed(nextSongFileName->path.c_str());
-        audioPlayer.play();
-        shouldRemoveFirstOnNext = true;
-      } else {
-        DEBUG_P(std::cout << "nothing to feed\n");
-        shouldRemoveFirstOnNext = false;
-      }
+      handleServerPlayNext();
       break;
     }
 
@@ -246,61 +252,45 @@ void Client::reqSendMusicFile() {
   }
 
   DEBUG_P(std::cout << "sending req add to queue to server\n");
-  {
-    // create request message
-    Message request;
-    request.setCommand((std::byte)Commands::Command::REQ_ADD_TO_QUEUE);
-    if (!clientSocket.write(request.data(), request.size())) {
-      return; // writing to the socket failed
-    }
+  Message request;
+  request.setCommand((std::byte)Commands::Command::REQ_ADD_TO_QUEUE);
+  if (!clientSocket.write(request.data(), request.size())) {
+    return; // writing to the socket failed
   }
 }
 
 void Client::sendMusicFile() {
+  Music m;
   MusicStorageEntry *p_entry = queue.addLocalAndLockEntry();
-  Music music; // create music object
-  std::string input;
-  while (true) {
-    std::cout << "Enter mp3 file path (-1 to cancel):\n >> ";
-    std::getline(std::cin, input);
-    if (input == "-1") {
-      // TODO: need to add cancel command, so that client thread on server side does not freeze
+  auto process = [this, &p_entry, &m]() {
+    getMP3FilePath(m);
+    if (m.getPath() == "-1") {
       queue.removeByAddress(p_entry);
-      p_entry->entryMutex.unlock();
+      p_entry = nullptr;
+      // TODO: need to add cancel command, so that client thread on server side does not freeze
       return;
     }
-    music.setPath(input);
-    if (music.readFileAtPath()) {
-      p_entry->path = input;
-      break; // file read successfully, exit loop
-    }
-  }
+    m.readFileAtPath();
+    p_entry->path = m.getPath();
+    p_entry->entryMutex.unlock();
+    DEBUG_P(std::cout << "unlocked entry mutex\n");
+  };
+
+  process();
+
   Message header;
   header.setCommand((std::byte)Commands::Command::SONG_DATA);
-  header.setBodySize((uint32_t)music.getVector().size());
+  header.setBodySize((uint32_t)m.getVector().size());
   DEBUG_P(std::cout << "sending data \n");
-  if (!clientSocket.writeHeaderAndData(header.data(), music.getVector().data(), music.getVector().size())) {
+  if (!clientSocket.writeHeaderAndData(header.data(), m.getVector().data(), m.getVector().size())) {
     DEBUG_P(std::cout << "couldn't send \n");
+    std::cerr << "There was an issue communicating the with server\n";
+    exit(1);
   } else {
     DEBUG_P(std::cout << "sent data \n");
   }
+  std::cout << "Added song to queue\n";
   p_entry->entryMutex.unlock();
   std::cout << " >> ";
   std::cout.flush();
-}
-
-const std::string &Client::getName() const  {
-  return clientName;
-}
-
-void Client::setName(std::string name) {
-  clientName = std::move(name);
-}
-
-int Client::getId() const {
-  return id;
-}
-
-const ThreadSafeSocket &Client::getSocket() const {
-  return clientSocket;
 }

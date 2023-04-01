@@ -34,7 +34,7 @@ public:
   Music(std::string , const std::vector<std::byte> &);
 
   /**
-   * Attemps to read the file at Music::path and store the contents in Music::bytes
+   * Attempts to read the file at Music::path and store the contents in Music::bytes
    * @returns true on success, false otherwise
   */
   bool readFileAtPath();
@@ -48,14 +48,18 @@ public:
   /**
    * Setters and getters
   */
+
+  static size_t validateFile(FILE *fp);
+  bool validateFileAtPath();
  
   [[nodiscard]] const std::string &getName() const;
   [[nodiscard]] const std::string &getPath() const;
   [[nodiscard]] std::vector<std::byte> &getVector();
   [[nodiscard]] std::shared_ptr<Music> getMemShared() const;
   void setPath(const std::string &);
-  void setVector(const std::vector<std::byte>&);
-  
+  void setVector(const std::vector<std::byte> &);
+
+
 };
 
 #endif

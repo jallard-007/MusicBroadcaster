@@ -66,7 +66,7 @@ public:
   /**
    * Getter for socketFD
   */
-  int getSocketFD() const;
+  [[nodiscard]] int getSocketFD() const;
 
   /**
    * Attempts to connect via IP and port to another TCP socket

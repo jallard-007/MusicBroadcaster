@@ -87,14 +87,22 @@ private:
   */
   void handleConnectionRequests();
 
+
+  /**
+  */
+  void handleClientReqAddQueueHelper_threaded(room::Client *p_client, MusicStorageEntry *p_queue);
+
+  void handleClientReqAddQueue(room::Client &client);
   /**
    * Handles incoming messages from the client.
    * @param client reference to client object
    * @returns false if the client should be removed, true otherwise
   */
-  bool handleClientRequest(room::Client& client);
+  bool handleClientRequests(room::Client& client);
 
-  void handleStdinAddSong(MusicStorageEntry *queueEntry);
+  void handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry);
+
+  void handleStdinAddSong();
 
   /**
    * Handles all stdin input
@@ -114,20 +122,15 @@ private:
   /**
    * Sends song data to a specific client
   */
-  void sendSongDataToClient(std::shared_ptr<Music> audio, MusicStorageEntry *p_queue, room::Client &client);
+  void sendSongDataToClient_threaded(std::shared_ptr<Music> audio, MusicStorageEntry *p_queue, room::Client &client);
 
   /**
    * Attempts to send the next song to all clients client
   */
   void sendSongToAllClients(const PipeData_t &);
 
-  /**
-   * Attempts to add a song to the queue
-   * @param clientPtr pointer to the client object to communicate with
-  */
-  void handleREQ_ADD_TO_QUEUE(room::Client *p_client, MusicStorageEntry *p_queue);
 
-  void waitOnAudio();
+  void waitOnAudio_threaded();
 
   void attemptPlayNext();
 

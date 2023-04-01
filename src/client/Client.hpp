@@ -15,8 +15,6 @@
 class Client {
 private:
   bool shouldRemoveFirstOnNext;
-  int id;
-  int fdMax;
   std::string clientName;
   MusicStorage queue;
   Player audioPlayer;
@@ -30,6 +28,10 @@ private:
   void sendMusicFile();
 
   bool handleStdinCommand();
+
+  bool handleServerSongData(uint32_t);
+
+  void handleServerPlayNext();
 
   bool handleServerMessage();
 
@@ -46,11 +48,6 @@ public:
   bool initializeClient();
 
   void handleClient();
-
-  [[nodiscard]] const ThreadSafeSocket &getSocket() const;
-  [[nodiscard]] const std::string &getName() const;
-  void setName(std::string);
-  int getId() const;
 };
 
 #endif

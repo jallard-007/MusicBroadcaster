@@ -8,9 +8,8 @@
 #include <thread>
 #include <iostream>
 #include "Player.hpp"
-#include "Music.hpp"
 
-Player::Player(): shouldPlay{false}, outBuffer{nullptr}, dev{nullptr}, player{} {
+Player::Player(): shouldPlay{}, dev{} {
   ao_initialize();
   driver = ao_default_driver_id();
   mh = mpg123_new(nullptr, nullptr);

@@ -32,6 +32,8 @@ namespace room {
     */
     ThreadSafeSocket socket;
 
+    bool handleServerSongData();
+
   public:
     Client();
 
@@ -60,7 +62,7 @@ namespace room {
     /**
      * Getter for name field
     */
-    const std::string &getName() const;
+    [[nodiscard]] const std::string &getName() const;
 
     /**
      * Getter for socket

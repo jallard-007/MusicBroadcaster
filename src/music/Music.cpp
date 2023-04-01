@@ -23,25 +23,38 @@ Music::Music(
   const std::vector<std::byte> &buffer
 ): name{std::move(songName)}, path{}, bytes{buffer} {}
 
-bool Music::readFileAtPath() {
-  FILE *fp = fopen(path.c_str(), "r");
+size_t Music::validateFile(FILE *fp) {
   if (fp == nullptr) {
     std::cerr << "Error: Unable to open file\n";
-    return false;
+    return 0;
   }
   fseek(fp, 0L, SEEK_END); // go to the end of the file
   const auto fileSize = (size_t)ftell(fp); // tell us the current position (this tells us the size of the file)
   if (fileSize > MAX_FILE_SIZE_BYTES) {
     std::cerr << "Error: File too big. Max file size is " << (MAX_FILE_SIZE_BYTES / 1000000.0) << " megabytes\n";
-    return false;
+    return 0;
   }
   if (fileSize == 0) {
     std::cerr << "Error: File empty\n";
+    return 0;
+  }
+  return fileSize;
+}
+
+bool Music::validateFileAtPath() {
+  FILE *fp = fopen(path.c_str(), "r");
+  size_t valid = validateFile(fp);
+  fclose(fp);
+  return valid > 0;
+}
+
+bool Music::readFileAtPath() {
+  FILE *fp = fopen(path.c_str(), "r");
+  size_t fileSize = validateFile(fp);
+  if (fileSize == 0) {
     return false;
   }
-
   bytes.resize(fileSize); // allocate memory to fit the file
-  
   fseek(fp, 0L, SEEK_SET); // reset position to beginning of file
   fread((void *)bytes.data(), bytes.size(), 1, fp); // read the file
   fclose(fp);
@@ -59,8 +72,8 @@ void Music::writeToPath() {
 
 std::shared_ptr<Music> Music::getMemShared() const {
   auto music = std::make_shared<Music>();
-  music.get()->setPath(path);
-  music.get()->readFileAtPath();
+  music->setPath(path);
+  music->readFileAtPath();
   return music;
 }
 
