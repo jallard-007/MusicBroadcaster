@@ -436,6 +436,7 @@ bool Room::handleClientRequests(room::Client &client) {
         message.getBodySize()
       );
       clientThread.detach();
+      break;
     }
 
     default:

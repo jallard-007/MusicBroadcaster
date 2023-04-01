@@ -148,7 +148,7 @@ void MusicStorage::removeByAddress(const MusicStorageEntry *musicAddress) {
 }
 
 void MusicStorage::removeByPosition(uint8_t position) {
-  if (position < 0 || position > MAX_SONGS - 1) {
+  if (position > MAX_SONGS - 1) {
     return;
   }
   DEBUG_P(std::cout << "waiting for queue mutex\n");
