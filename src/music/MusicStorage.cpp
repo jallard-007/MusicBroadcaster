@@ -148,3 +148,7 @@ void MusicStorage::removeFront() {
   musicStorageMutex.unlock();
   DEBUG_P(std::cout << "unlocked queue mutex\n");
 }
+
+const std::list<MusicStorageEntry> &MusicStorage::getSongs() const {
+  return songs;
+}

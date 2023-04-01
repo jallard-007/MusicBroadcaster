@@ -151,12 +151,12 @@ bool Client::handleStdinCommand() {
   return true;
 }
 
-bool Client::handleServerSongData(uint32_t size) {
-  DEBUG_P(std::cout << "song data message from server of size" << size << "\n");
+bool Client::handleServerSongData(Message &mes) {
+  DEBUG_P(std::cout << "song data message from server of size" << mes.getBodySize() << "\n");
   Music music;
-  music.getVector().resize(size);
+  music.getVector().resize(mes.getBodySize());
   // will want to eventually thread this off
-  if (clientSocket.readAll(music.getVector().data(), size) == 0) {
+  if (clientSocket.readAll(music.getVector().data(), mes.getBodySize()) == 0) {
     std::cerr << "lost connection to room\n";
     return false;
   }
@@ -216,7 +216,7 @@ bool Client::handleServerMessage() {
   switch (command) {
     // always take the next queue entry, if there are none available, add one
     case Commands::Command::SONG_DATA: {
-      return handleServerSongData(mes.getBodySize());
+      return handleServerSongData(mes);
     }
     
     case Commands::Command::PLAY_NEXT: {

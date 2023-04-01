@@ -3,27 +3,36 @@
  * Implementation file for player class
 */
 
-#include <ao/ao.h>
+#include <out123.h>
 #include <mpg123.h>
 #include <thread>
 #include <iostream>
 #include "Player.hpp"
 
-Player::Player(): shouldPlay{}, dev{} {
-  ao_initialize();
-  driver = ao_default_driver_id();
+Player::Player(): shouldPlay{} {
   mh = mpg123_new(nullptr, nullptr);
+  if (mh == nullptr) {
+    std::cerr << "Error: mpg123 library failed\n";
+    exit(1);
+  }
+  ao = out123_new();
+  if (ao == nullptr) {
+    std::cerr << "Error: out123 library failed\n";
+    exit(1);
+  }
   mpg123_param(mh, MPG123_ADD_FLAGS, MPG123_IGNORE_STREAMLENGTH, 0); // removes warning message on 'Frankenstein'
   outBufferSize = mpg123_outblock(mh);
   outBuffer = malloc(outBufferSize);
+  if(out123_open(ao, nullptr, nullptr) != OUT123_OK) {
+    std::cout << "err: " << out123_strerror(ao) << '\n';
+    exit(1);
+  }
 }
 
 Player::~Player() {
   shouldPlay = false;
-  wait();
-  ao_close(dev);
+  out123_del(ao);
   mpg123_delete(mh);
-  ao_shutdown();
   free(outBuffer);
 }
 
@@ -35,12 +44,14 @@ void Player::feed(const char *fp) {
 void Player::_newFormat() {
   int channels, encoding;
   long rate;
-  mpg123_getformat(mh, &rate, &channels, &encoding);
-  ao_sample_format format = {(int)mpg123_encsize(encoding) * BITS, (int)rate, channels, AO_FMT_NATIVE, nullptr};
-  if (dev != nullptr) {
-    ao_close(dev);
+  if (mpg123_getformat(mh, &rate, &channels, &encoding) != MPG123_OK) {
+    std::cout << "err: " << mpg123_strerror(mh) << '\n';
+    exit(1);
   }
-  dev = ao_open_live(driver, &format, nullptr);
+  if (out123_start(ao, rate, channels, encoding) != OUT123_OK) {
+    std::cout << "err: " << out123_strerror(ao) << '\n';
+    exit(1);
+  }
 }
 
 void Player::play() {
@@ -75,9 +86,11 @@ void Player::seek(float time) {
 
 void Player::_play() {
   std::size_t done;
+  size_t played;
+  int err;
   while (shouldPlay) {
     // decode audio
-    const int err = mpg123_read(mh, outBuffer, outBufferSize, &done);
+    err = mpg123_read(mh, outBuffer, outBufferSize, &done);
     if (err == MPG123_NEW_FORMAT) {
       // new format as been detected, handle it
       _newFormat();
@@ -89,6 +102,9 @@ void Player::_play() {
       shouldPlay = false;
     }
     // play the audio
-    ao_play(dev, (char *)outBuffer, (uint_32)done);
+    if ((played = out123_play(ao, outBuffer, done)) != done) {
+      // try to finish playing
+      //out123_play(ao, outBuffer + played, done - played);
+    }
   }
 }

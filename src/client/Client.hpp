@@ -9,6 +9,7 @@
 #include <string>
 
 #include "../music/Player.hpp"
+#include "../messaging/Message.hpp"
 #include "../music/MusicStorage.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
@@ -29,7 +30,7 @@ private:
 
   bool handleStdinCommand();
 
-  bool handleServerSongData(uint32_t);
+  bool handleServerSongData(Message &mes);
 
   void handleServerPlayNext();
 

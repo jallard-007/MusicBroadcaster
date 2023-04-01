@@ -32,8 +32,6 @@ ThreadSafeSocket::ThreadSafeSocket(ThreadSafeSocket &&moved) noexcept:
 }
 
 ThreadSafeSocket::~ThreadSafeSocket() {
-  std::unique_lock<std::mutex> w_lock{writeLock};
-  std::unique_lock<std::mutex> r_lock{readLock};
   if (socketFD != 0) {
     close(socketFD);
   }

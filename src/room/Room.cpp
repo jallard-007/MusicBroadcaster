@@ -107,7 +107,9 @@ void Room::launchRoom() {
     // input from stdin, local user entered a command
     if (FD_ISSET(0, &read_fds)) { 
       DEBUG_P(std::cout << "stdin command entered\n");
-      handleStdinCommands();
+      if (!handleStdinCommands()) {
+        return;
+      }
     }
 
     // data from pipe, a thread has finished receiving an audio file
@@ -151,6 +153,26 @@ void Room::launchRoom() {
   }
 }
 
+/*
+scenario:
+  queue has 2 songs currently:
+    first is half way through
+    second is ready to play (sent to at least 1 other)
+  client joins:
+    do some check to see if its worth it to send the current song
+    since we are just half way through, yes (depending on time remaining as well) (maybe we could chop the file? future worries although repeat would then be an issue)
+    send current,
+
+  existing client requests to add a song:
+    reserve spot in queue,
+    wait for file
+
+  back in client joins,
+    send second song,
+    new reservation is added to queue half way through, now what?
+    
+*/
+
 void Room::handleConnectionRequests() {
   ThreadSafeSocket clientSocket{hostSocket.accept()};
   if (clientSocket.getSocketFD() == -1) {
@@ -161,37 +183,23 @@ void Room::handleConnectionRequests() {
     // new fileDescriptor is greater than previous greatest, update it
     fdMax = clientSocket.getSocketFD();
   }
-  // finally, add the client to both the selector list and the room list
+
   FD_SET(clientSocket.getSocketFD(), &master);
-  this->addClient({"user", std::move(clientSocket)});
-}
+  addClient({"user", std::move(clientSocket)});
 
-enum class RoomCommand {
-  FAQ,
-  HELP,
-  EXIT,
-  ADD_SONG,
-  SEEK,
-};
-
-const std::unordered_map<std::string, RoomCommand> roomCommandMap = {
-  {"faq", RoomCommand::FAQ},
-  {"help", RoomCommand::HELP},
-  {"exit", RoomCommand::EXIT},
-  {"add song", RoomCommand::ADD_SONG},
-  {"seek", RoomCommand::SEEK},
-};
-
-// TODO:
-void roomShowHelp() {
-  std::cout <<
-  "List of commands as room host:\n\n";
-}
-
-// TODO:
-void roomShowFAQ() {
-  std::cout <<
-  "Question 1:\n\n";
+  // auto &songs = queue.getSongs();
+  // for (const MusicStorageEntry &entry : songs) {
+  //   Music m;
+  //   m.setPath(entry.path);
+  //   auto data = m.getMemShared();
+  //   if (&entry == queue.getFront()) {
+  //     // decide if its worth it to send the first song
+  //   } else if (entry.sent > 0) {
+  //     std::thread thread = std::thread(&Room::sendSongDataToClient_threaded, this, data, &entry, std::ref(client.getSocket()));
+  //     thread.detach();
+  //   }
+  // }
+  // add the client to the selector list
 }
 
 void Room::processThreadFinishedReceiving() {
@@ -237,13 +245,12 @@ void Room::processThreadFinishedSending() {
   }
 }
 
-void Room::sendSongDataToClient_threaded(std::shared_ptr<Music> audio, MusicStorageEntry *p_queue, room::Client &client) {
+void Room::sendSongDataToClient_threaded(std::shared_ptr<Music> audio, const MusicStorageEntry *p_queue, ThreadSafeSocket &clientSocket) {
   PipeData_t t;
-  t.p_queue = p_queue;
-  t.socketFD = client.getSocket().getSocketFD();
+  t.p_queue = const_cast<MusicStorageEntry *>(p_queue);
+  t.socketFD = clientSocket.getSocketFD();
 
-  auto process = [&t, &client, &audio]() {
-    ThreadSafeSocket &clientSocket = client.getSocket();
+  auto process = [&t, &clientSocket, &audio]() {
     { // send file to client
       const auto &audioData = audio->getVector();
       Message message;
@@ -257,7 +264,7 @@ void Room::sendSongDataToClient_threaded(std::shared_ptr<Music> audio, MusicStor
     }
     { // wait for ok response from client
       std::byte responseHeader[SIZE_OF_HEADER];
-      ::memset(responseHeader, 0, sizeof responseHeader);
+      ::memset(responseHeader, 0, SIZE_OF_HEADER);
       DEBUG_P(std::cout << "waiting for ok from client\n");
       if (clientSocket.readAll(responseHeader, sizeof responseHeader) == 0) {
         t.socketFD *= -1;
@@ -310,7 +317,7 @@ void Room::sendSongToAllClients(const PipeData_t &next) {
       FD_CLR(client.getSocket().getSocketFD(), &master);
       // no need to send it back to the client that sent it
       if (client.getSocket().getSocketFD() != next.socketFD) {
-        std::thread thread = std::thread(&Room::sendSongDataToClient_threaded, this, data, next.p_queue, std::ref(client));
+        std::thread thread = std::thread(&Room::sendSongDataToClient_threaded, this, data, next.p_queue, std::ref(client.getSocket()));
         thread.detach();
       }
     }
@@ -323,7 +330,7 @@ void Room::waitOnAudio_threaded() {
   DEBUG_P(std::cout << "waiting for audio to finish\n");
   audioPlayer.wait();
   DEBUG_P(std::cout << "audio finished\n");
-  int nothing;
+  int nothing = 0;
   write(threadWaitAudioPipe[1], &nothing, sizeof nothing);
 }
 
@@ -491,9 +498,11 @@ void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
     std::cout << "Added song to queue\n";
   };
 
-  process();
+  if (queueEntry != nullptr) {
+    process();
+  }
 
-  PipeData_t t;
+  PipeData_t t{};
   t.socketFD = 0;
   t.p_queue = queueEntry;
   DEBUG_P(std::cout << "add local song to queue process done, writing to recv pipe: socketFD " << t.socketFD << "\n");
@@ -521,7 +530,37 @@ void Room::handleStdinAddSong() {
   addSongThread.detach();
 }
 
-void Room::handleStdinCommands() {
+enum class RoomCommand {
+  FAQ,
+  HELP,
+  EXIT,
+  QUIT,
+  ADD_SONG,
+  SEEK,
+};
+
+const std::unordered_map<std::string, RoomCommand> roomCommandMap = {
+  {"faq", RoomCommand::FAQ},
+  {"help", RoomCommand::HELP},
+  {"exit", RoomCommand::EXIT},
+  {"quit", RoomCommand::QUIT},
+  {"add song", RoomCommand::ADD_SONG},
+  {"seek", RoomCommand::SEEK},
+};
+
+// TODO:
+void roomShowHelp() {
+  std::cout <<
+  "List of commands as room host:\n\n";
+}
+
+// TODO:
+void roomShowFAQ() {
+  std::cout <<
+  "Question 1:\n\n";
+}
+
+bool Room::handleStdinCommands() {
   std::string input;
   std::getline(std::cin, input);
   RoomCommand command;
@@ -530,7 +569,7 @@ void Room::handleStdinCommands() {
   } catch (const std::out_of_range &err){
     std::cout << "Invalid command. Try 'help' for information\n >> ";
     std::cout.flush();
-    return;
+    return true;
   }
 
   switch (command) {
@@ -543,12 +582,15 @@ void Room::handleStdinCommands() {
       break;
 
     case RoomCommand::EXIT:
+      return false;
+
+    case RoomCommand::QUIT:
       queue.~MusicStorage();
       exit(0);
 
     case RoomCommand::ADD_SONG: {
       handleStdinAddSong();
-      return;
+      return true;
     }
 
     case RoomCommand::SEEK:
@@ -561,6 +603,7 @@ void Room::handleStdinCommands() {
   }
   std::cout << " >> ";
   std::cout.flush();
+  return true;
 }
 
 void Room::sendBasicResponse(ThreadSafeSocket& socket, Command response, std::byte option) {

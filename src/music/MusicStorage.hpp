@@ -64,6 +64,8 @@ public:
   bool hasPreviousBeenSent(MusicStorageEntry *);
 
   void removeFront();
+
+  [[nodiscard]] const std::list<MusicStorageEntry> &getSongs() const;
 };
 
 

@@ -12,10 +12,10 @@ default:
 	make all
 
 all: obj/main.o obj/CLInput.o obj/clientClient.o obj/Message.o obj/Music.o obj/MusicStorage.o obj/Player.o obj/serverClient.o obj/Room.o obj/BaseSocket.o obj/ThreadSafeSocket.o
-	$(GXX) $(GXXFLAGS) $^ -o main -lao -lmpg123
+	$(GXX) $(GXXFLAGS) $^ -o main -lout123 -lmpg123
 
 static: obj/main.o obj/CLInput.o obj/clientClient.o obj/Message.o obj/Music.o obj/MusicStorage.o obj/Player.o obj/serverClient.o obj/Room.o obj/BaseSocket.o obj/ThreadSafeSocket.o
-	$(GXX) $(GXXFLAGS) $^ -o main /usr/local/lib/libao.a /usr/local/lib/libmpg123.a
+	$(GXX) $(GXXFLAGS) $^ -o main /usr/local/lib/libout123.a /usr/local/lib/libmpg123.a
 
 # src/main.cpp
 obj/main.o: src/main.cpp src/debug.hpp

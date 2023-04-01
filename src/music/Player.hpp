@@ -6,7 +6,7 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include <ao/ao.h>
+#include <out123.h>
 #include <mpg123.h>
 #include <thread>
 #include <atomic>
@@ -18,10 +18,6 @@
 
 class Player {
 private:
-  /**
-   * used by libao
-  */
-  int driver;
 
   /**
    * atomic boolean to communicate with player thread
@@ -39,14 +35,14 @@ private:
   void *outBuffer;
 
   /**
+   * used by out123
+  */
+  out123_handle *ao;
+
+  /**
    * used by mpg123
   */
   mpg123_handle *mh;
-
-  /**
-   * used by libao
-  */
-  ao_device *dev;
 
   /**
    * thread in which audio plays

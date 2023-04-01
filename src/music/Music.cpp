@@ -43,8 +43,11 @@ size_t Music::validateFile(FILE *fp) {
 
 bool Music::validateFileAtPath() {
   FILE *fp = fopen(path.c_str(), "r");
+  
   size_t valid = validateFile(fp);
-  fclose(fp);
+  if (fp != nullptr) {
+    fclose(fp);
+  }
   return valid > 0;
 }
 

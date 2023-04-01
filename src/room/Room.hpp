@@ -87,7 +87,6 @@ private:
   */
   void handleConnectionRequests();
 
-
   /**
   */
   void handleClientReqAddQueueHelper_threaded(room::Client *p_client, MusicStorageEntry *p_queue);
@@ -107,7 +106,7 @@ private:
   /**
    * Handles all stdin input
   */
-  void handleStdinCommands();
+  bool handleStdinCommands();
 
   /**
    * 
@@ -122,7 +121,7 @@ private:
   /**
    * Sends song data to a specific client
   */
-  void sendSongDataToClient_threaded(std::shared_ptr<Music> audio, MusicStorageEntry *p_queue, room::Client &client);
+  void sendSongDataToClient_threaded(std::shared_ptr<Music> audio, const MusicStorageEntry *p_queue, ThreadSafeSocket &clientSocket);
 
   /**
    * Attempts to send the next song to all clients client
