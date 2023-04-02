@@ -74,7 +74,7 @@ private:
   /**
    * 
   */
-  uint64_t startTime;
+  int64_t startTime;
 
   /**
    * name of the room, also not being used

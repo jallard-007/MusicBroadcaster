@@ -23,4 +23,4 @@ https://www.rapidtables.com/code/linux/gcc/gcc-i.html
 <h2>Run</h2>
 Run the project with ./main
 
-Within the program, use the command 'help' to see information about how the use the program.
+Within the program, use the command 'help' to see information about how to use the program.
