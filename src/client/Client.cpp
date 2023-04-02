@@ -8,9 +8,13 @@
 #include <cstring>
 #include <cstddef>
 #include <utility>
+#include <unordered_map>
+#if _WIN32
+// windows includes
+#elif defined(__APPLE__) || defined(__unix__)
 #include <unistd.h>
 #include <sys/select.h>
-#include <unordered_map>
+#endif
 
 #include "../debug.hpp"
 #include "Client.hpp"

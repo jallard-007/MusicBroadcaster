@@ -3,3 +3,7 @@ main
 .DS_Store
 obj/
 examples/
+*.pdb
+*.exe
+*.obj
+*.ilk

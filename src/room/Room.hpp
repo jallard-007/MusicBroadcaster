@@ -9,7 +9,13 @@
 #include <string>
 #include <list>
 #include <mutex>
+
+#if _WIN32
+// windows includes
+#elif defined(__APPLE__) || defined(__unix__)
 #include <sys/select.h>
+#endif
+
 #include "Client.hpp"
 #include "../socket/BaseSocket.hpp"
 #include "../music/MusicStorage.hpp"

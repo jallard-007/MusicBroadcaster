@@ -7,10 +7,14 @@
 #include <vector>
 #include <cstdlib>
 #include <cstring>
-#include <sys/select.h>
-#include <unistd.h>
 #include <thread>
 #include <unordered_map>
+#if _WIN32
+// windows includes
+#elif defined(__APPLE__) || defined(__unix__)
+#include <sys/select.h>
+#include <unistd.h>
+#endif
 
 #include "../debug.hpp"
 #include "Room.hpp"

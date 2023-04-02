@@ -1,0 +1,1 @@
+cl.exe /Zi /EHsc /nologo /std:c++20 /W4 /WX /Fe"main.exe" src/*.cpp src/socket/*.cpp src/room/*.cpp src/music/*.cpp src/messaging/*.cpp src/client/*.cpp

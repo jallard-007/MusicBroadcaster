@@ -5,7 +5,11 @@
 
 #include <string>
 #include <iostream>
+#if _WIN32
+// windows includes
+#elif defined(__APPLE__) || defined(__unix__)
 #include <unistd.h>
+#endif
 
 #include "../debug.hpp"
 #include "MusicStorage.hpp"
