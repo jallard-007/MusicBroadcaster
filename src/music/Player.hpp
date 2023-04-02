@@ -14,7 +14,6 @@
 #include "Music.hpp"
 
 #define BITS 8
-#define MP3_FRAMES_PER_SEC 38.46
 
 class Player {
 private:
@@ -78,7 +77,7 @@ public:
 
   void unmute();
 
-  void seek(float time);
+  void seek(double time);
 
   bool isPlaying();
 

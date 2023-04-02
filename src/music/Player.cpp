@@ -41,6 +41,7 @@ Player::~Player() {
 void Player::feed(const char *fp) {
   pause();
   mpg123_open(mh, fp);
+  _newFormat();
 }
 
 void Player::_newFormat() {
@@ -87,9 +88,9 @@ bool Player::isPlaying() {
   return shouldPlay;
 }
 
-void Player::seek(float time) {
-  const auto offset = static_cast<off_t>(time * MP3_FRAMES_PER_SEC);
-  if (mpg123_seek_frame(mh, offset, SEEK_SET) < 0) {
+void Player::seek(double time) {
+  DEBUG_P(std::cout << "seek to time: " << time << '\n');
+  if (mpg123_seek_frame(mh, mpg123_timeframe(mh, time), SEEK_SET) < 0) {
     mpg123_strerror(mh);
   }
 }
@@ -103,6 +104,7 @@ void Player::_play() {
     if (err == MPG123_NEW_FORMAT) {
       // new format as been detected, handle it
       _newFormat();
+      continue;
     } else if (err == MPG123_DONE) {
       shouldPlay = false;
     } else if (err != MPG123_OK) {
@@ -113,7 +115,7 @@ void Player::_play() {
     // play the audio
     if (out123_play(ao, outBuffer, done) != done) {
       // try to finish playing
-      //out123_play(ao, outBuffer + played, done - played);
+      // out123_play(ao, outBuffer + played, done - played);
     }
   }
 }

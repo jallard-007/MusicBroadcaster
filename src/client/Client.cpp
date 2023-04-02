@@ -106,6 +106,7 @@ void Client::processThreadFinished() {
   if (t.fileDes < 0) {
     exit(1);
   }
+  DEBUG_P(std::cout << "adding fileDes back to master: " << t.fileDes << "\n");
   FD_SET(t.fileDes, &master);
 }
 
@@ -248,6 +249,7 @@ void Client::handleServerPlayNext(Message &mes) {
   DEBUG_P(std::cout << "play next message from server\n");
   if (audioPlayer.isPlaying()) {
     audioPlayer.pause();
+    audioPlayer.wait();
   }
   if (shouldRemoveFirstOnNext) {
     DEBUG_P(std::cout << "remove front first\n");
@@ -270,7 +272,6 @@ void Client::handleServerPlayNext(Message &mes) {
   DEBUG_P(std::cout << "got entry mutex\n");
   DEBUG_P(std::cout << "feeding next\n");
   audioPlayer.feed(nextSongFileName->path.c_str());
-  audioPlayer.play();
   
   // calculate how far off we are from server time and seek to that point
   int64_t roomTime{};
@@ -281,9 +282,11 @@ void Client::handleServerPlayNext(Message &mes) {
   );
   const int64_t diff = (int64_t)std::time(0) - roomTime;
   if (diff > 0 && diff < 86400) {
-    audioPlayer.seek(static_cast<float>(diff));
+    audioPlayer.seek(static_cast<double>(diff));
   }
-  shouldRemoveFirstOnNext = true;
+  shouldRemoveFirstOnNext = true;\
+  DEBUG_P(std::cout << "playing next\n");
+  audioPlayer.play();
 }
 
 bool Client::handleServerMessage() {

@@ -217,7 +217,6 @@ void Room::processThreadFinishedSending() {
 
     --t.p_client->entriesTillSynced;
     if (t.p_client->entriesTillSynced == 0 && audioPlayer.isPlaying()) {
-      t.p_client->entriesTillSynced = true;
       std::vector<std::byte> bytes{0};
       bytes.resize(sizeof startTime);
       std::copy(
@@ -522,7 +521,7 @@ void Room::handleConnectionRequests() {
       if (data == nullptr) {
         continue;
       }
-      client.entriesTillSynced = false;
+      ++client.entriesTillSynced;
       std::thread thread = std::thread(
         &Room::sendSongDataToClient_threaded,
         this, data, &entry, static_cast<uint8_t>(position), &client
@@ -531,22 +530,7 @@ void Room::handleConnectionRequests() {
     }
   }
 
-  if (audioPlayer.isPlaying()) {
-    std::vector<std::byte> bytes{0};
-    bytes.resize(sizeof startTime);
-    std::copy(
-      reinterpret_cast<const std::byte*>(&startTime),
-      reinterpret_cast<const std::byte*>(&startTime) + sizeof startTime,
-      bytes.data()
-    );
-    Message message;
-    message.setCommand(Command::PLAY_NEXT);
-    message.setBodySize(sizeof startTime);
-    message.setBody(bytes);
-    client.getSocket().write(message.data(), message.size());
-  }
-
-  if (client.entriesTillSynced) {
+  if (client.entriesTillSynced == 0) {
     // add the client to the selector list
     FD_SET(client.getSocket().getSocketFD(), &master);
   }
