@@ -1,17 +1,15 @@
 <h2>Dependencies:</h2>
-out123 and mpg123</br>
+mpg123</br>
 
 To install on mac with brew:</br>
 
 ```bash
-$ brew install out123
 $ brew install mpg123
 ```
 
 To install on linux:
 
 ```bash
-$ sudo apt install libout123-dev
 $ sudo apt install libmpg123-dev
 ```
 
