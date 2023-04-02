@@ -17,6 +17,8 @@
 #include "../messaging/Commands.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
+namespace room {
+
 typedef struct {
   int socketFD;
   room::Client *p_client;
@@ -203,5 +205,7 @@ public:
   [[nodiscard]] const std::string &getName() const;
   [[nodiscard]] const std::list<room::Client> &getClients() const;
 };
+
+}
 
 #endif

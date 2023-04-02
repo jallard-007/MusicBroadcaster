@@ -13,24 +13,35 @@
 #include "../music/MusicStorage.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
+// client
+namespace clnt {
+
+typedef struct {
+  int fileDes;
+} PipeData_t;
+
 class Client {
 private:
   bool shouldRemoveFirstOnNext;
+  int fdMax;
+  int threadPipe[2];
   std::string clientName;
   MusicStorage queue;
   Player audioPlayer;
   fd_set master;
   ThreadSafeSocket clientSocket;
 
+  void processThreadFinished();
+
   /**
   */
   void reqSendMusicFile();
 
-  void sendMusicFile(uint8_t);
+  void sendMusicFile_threaded(uint8_t);
 
   bool handleStdinCommand();
 
-  bool handleServerSongData(Message &mes);
+  void handleServerSongData_threaded(Message mes);
 
   void handleServerPlayNext();
 
@@ -38,7 +49,7 @@ private:
 
 public:
   Client();
-  ~Client() = default;
+  ~Client();
 
   /**
    * Constructor
@@ -50,5 +61,7 @@ public:
 
   void handleClient();
 };
+
+}
 
 #endif

@@ -76,6 +76,8 @@ public:
 
   void mute();
 
+  void unmute();
+
   void seek(float time);
 
   bool isPlaying();

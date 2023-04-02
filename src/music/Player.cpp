@@ -8,6 +8,7 @@
 #include <thread>
 #include <iostream>
 #include "Player.hpp"
+#include "../debug.hpp"
 
 Player::Player(): shouldPlay{} {
   mh = mpg123_new(nullptr, nullptr);
@@ -30,7 +31,12 @@ Player::Player(): shouldPlay{} {
 }
 
 Player::~Player() {
-  shouldPlay = false;
+  DEBUG_P(std::cout << "player destructor\n");
+  pause();
+  DEBUG_P(std::cout << "player paused\n");
+  DEBUG_P(std::cout << "player waiting\n");
+  wait();
+  DEBUG_P(std::cout << "player done waiting\n");
   out123_del(ao);
   mpg123_delete(mh);
   free(outBuffer);
@@ -75,6 +81,10 @@ void Player::wait() {
 
 void Player::mute() {
   out123_param(ao, OUT123_ADD_FLAGS, OUT123_MUTE, 0, nullptr);
+}
+
+void Player::unmute() {
+  out123_param(ao, OUT123_REMOVE_FLAGS, OUT123_MUTE, 0, nullptr);
 }
 
 bool Player::isPlaying() {

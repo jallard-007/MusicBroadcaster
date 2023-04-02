@@ -19,6 +19,7 @@
 #include "../messaging/Message.hpp"
 
 using namespace Commands;
+using namespace room;
 
 Room::Room(): ip{}, fdMax{}, hostSocket{},
   threadRecvPipe{}, threadSendPipe{}, threadWaitAudioPipe{},
@@ -37,6 +38,14 @@ Room::~Room() {
   if (threadSendPipe[1] != 0) {
     close(threadSendPipe[1]);
   }
+  
+  // stop the audio and wait for the waitOnAudio_threaded process to finish
+  if (audioPlayer.isPlaying()) {
+    audioPlayer.pause();
+    int x;
+    ::read(threadWaitAudioPipe[0], reinterpret_cast<void *>(&x), sizeof (int));
+  }
+  
   if (threadWaitAudioPipe[0] != 0) {
     close(threadWaitAudioPipe[0]);
   }
@@ -171,8 +180,10 @@ void Room::processThreadFinishedReceiving() {
   if (t.p_entry != nullptr) {
     sendSongToAllClients(t);
   } else {
-    DEBUG_P(std::cout << "adding was cancelled, now adding client back to master\n");
+    // this should only be reached when room host cancels adding a song to the queue
+    DEBUG_P(std::cout << "adding was cancelled, now adding client " << t.socketFD << " back to master\n");
     FD_SET(t.socketFD, &master);
+    attemptPlayNext();
   }
 }
 
@@ -281,7 +292,9 @@ void Room::waitOnAudio_threaded() {
   audioPlayer.wait();
   DEBUG_P(std::cout << "audio finished\n");
   int nothing = 0;
+  DEBUG_P(std::cout << "write to waitAudioPipe\n");
   write(threadWaitAudioPipe[1], &nothing, sizeof nothing);
+  DEBUG_P(std::cout << "done writing to waitAudioPipe\n");
 }
 
 void Room::attemptPlayNext() {
@@ -318,10 +331,9 @@ void Room::attemptPlayNext() {
 
 void Room::handleClientReqSongData_threaded(room::Client *p_client, uint32_t sizeOfFile) {
   ThreadSafeSocket &socket = p_client->getSocket();
-  RecvPipeData_t t {
-    socket.getSocketFD(),
-    p_client->p_entry
-  };
+  RecvPipeData_t t{};
+  t.socketFD = socket.getSocketFD();
+  t.p_entry = p_client->p_entry;
 
   auto process = [this, &socket, &t, sizeOfFile]() {
     DEBUG_P(std::cout << "res ok, now getting the song\n");
@@ -395,6 +407,7 @@ void Room::handleCancelReqAddQueue(MusicStorageEntry *p_entry) {
   for (room::Client &client : clients) {
     client.getSocket().write(message.data(), message.size());
   }
+  attemptPlayNext();
 }
 
 bool Room::handleClientRequests(room::Client &client) {
@@ -514,10 +527,9 @@ void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
   }
 
   DEBUG_P(std::cout << "add local song to queue process done, writing to recv pipe: socketFD " << t.socketFD << "\n");
-  ::write(threadRecvPipe[1], reinterpret_cast<const void *>(&t), sizeof t);
-
   std::cout << " >> ";
   std::cout.flush();
+  ::write(threadRecvPipe[1], reinterpret_cast<const void *>(&t), sizeof t);
 }
 
 void Room::handleStdinAddSong() {
@@ -540,6 +552,8 @@ enum class RoomCommand {
   QUIT,
   ADD_SONG,
   SEEK,
+  MUTE,
+  UNMUTE
 };
 
 const std::unordered_map<std::string, RoomCommand> roomCommandMap = {
@@ -549,6 +563,9 @@ const std::unordered_map<std::string, RoomCommand> roomCommandMap = {
   {"quit", RoomCommand::QUIT},
   {"add song", RoomCommand::ADD_SONG},
   {"seek", RoomCommand::SEEK},
+  {"mute", RoomCommand::MUTE},
+  {"unmute", RoomCommand::UNMUTE},
+
 };
 
 // TODO:
@@ -597,6 +614,14 @@ bool Room::handleStdinCommands() {
     }
 
     case RoomCommand::SEEK:
+      break;
+
+    case RoomCommand::MUTE:
+      audioPlayer.mute();
+      break;
+
+    case RoomCommand::UNMUTE:
+      audioPlayer.unmute();
       break;
 
     default:

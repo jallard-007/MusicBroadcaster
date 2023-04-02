@@ -89,7 +89,7 @@ int main() {
       
       case Command::MAKE_ROOM: {
         // "make room" command was entered, so now we treat this user as a client who wants to make a room
-        Room room;
+        room::Room room;
         if (room.initializeRoom()) {
           room.launchRoom();
         }
@@ -98,7 +98,7 @@ int main() {
 
       case Command::JOIN_ROOM: {
         // "join room" command was entered, so now we treat this user as a client who wants to join a room
-        Client client;
+        clnt::Client client;
         if (client.initializeClient()) {
           client.handleClient();
         }
