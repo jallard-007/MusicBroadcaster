@@ -635,7 +635,6 @@ int Room::handleStdinCommands() {
       return 0;
 
     case RoomCommand::QUIT:
-      queue.~MusicStorage();
       return -1;
 
     case RoomCommand::ADD_SONG: {
