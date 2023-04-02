@@ -98,14 +98,14 @@ bool Room::initializeRoom() {
   return true;
 }
 
-void Room::launchRoom() {
+bool Room::launchRoom() {
   std::cout << " >> ";
   std::cout.flush();
   while (true) {
     fd_set read_fds = master;  // temp file descriptor list for select()
     if (::select(fdMax + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
       fprintf(stderr, "select: %s (%d)\n", strerror(errno), errno);
-      return;
+      return false;
     }
 
     // connection request, add them to the room
@@ -117,8 +117,12 @@ void Room::launchRoom() {
     // input from stdin, local user entered a command
     if (FD_ISSET(0, &read_fds)) { 
       DEBUG_P(std::cout << "stdin command entered\n");
-      if (!handleStdinCommands()) {
-        return;
+      const int result = handleStdinCommands();
+      if (result == 0) {
+        return true;
+      }
+      if (result == -1) {
+        return false;
       }
     }
 
@@ -161,6 +165,8 @@ void Room::launchRoom() {
       }
     }
   }
+
+  return true;
 }
 
 void Room::processThreadFinishedReceiving() {
@@ -580,7 +586,7 @@ void roomShowFAQ() {
   "Question 1:\n\n";
 }
 
-bool Room::handleStdinCommands() {
+int Room::handleStdinCommands() {
   std::string input;
   std::getline(std::cin, input);
   RoomCommand command;
@@ -589,7 +595,7 @@ bool Room::handleStdinCommands() {
   } catch (const std::out_of_range &err){
     std::cout << "Invalid command. Try 'help' for information\n >> ";
     std::cout.flush();
-    return true;
+    return 1;
   }
 
   switch (command) {
@@ -602,11 +608,11 @@ bool Room::handleStdinCommands() {
       break;
 
     case RoomCommand::EXIT:
-      return false;
+      return 0;
 
     case RoomCommand::QUIT:
       queue.~MusicStorage();
-      exit(0);
+      return -1;
 
     case RoomCommand::ADD_SONG: {
       handleStdinAddSong();
@@ -631,7 +637,7 @@ bool Room::handleStdinCommands() {
   }
   std::cout << " >> ";
   std::cout.flush();
-  return true;
+  return 1;
 }
 
 void Room::sendBasicResponse(ThreadSafeSocket& socket, Command response, std::byte option) {

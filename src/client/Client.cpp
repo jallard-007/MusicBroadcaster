@@ -61,27 +61,31 @@ bool Client::initializeClient() {
 }
 
 // TODO: if interrupted by server that requires a message to be printed, take what was written and put it back on command line after
-void Client::handleClient() {
+int Client::handleClient() {
   std::cout << " >> ";
   std::cout.flush();
   while (true) {
     fd_set read_fds = master;  // temp file descriptor list for select()
     if (::select(fdMax + 1, &read_fds, nullptr, nullptr, nullptr /* <- time out in microseconds*/) == -1){
       fprintf(stderr, "select: %s (%d)\n", strerror(errno), errno);
-      return;
+      return false;
     }
 
     if (FD_ISSET(clientSocket.getSocketFD(), &read_fds)) {
       DEBUG_P(std::cout << "server message\n");
       if (!handleServerMessage()) {
-        return;
+        return true;
       }
     }
 
     // input from stdin, local user entered a command
     if (FD_ISSET(0, &read_fds)) { 
-      if (!handleStdinCommand()) {
-        return;
+      const int result = handleStdinCommand();
+      if (result == 0) {
+        return true;
+      }
+      if (result == -1) {
+        return false;
       }
     }
 
@@ -135,7 +139,7 @@ void clientShowFAQ() {
   "Question 1:\n\n";
 }
 
-bool Client::handleStdinCommand() {
+int Client::handleStdinCommand() {
   std::string input;
   std::getline(std::cin, input);
   ClientCommand command;
@@ -157,16 +161,15 @@ bool Client::handleStdinCommand() {
       break;
 
     case ClientCommand::EXIT:
-      return false;
+      return 0;
 
     case ClientCommand::QUIT:
-      queue.~MusicStorage();
-      exit(0);
+      return -1;
 
     case ClientCommand::ADD_SONG:
       DEBUG_P(std::cout << "add song command\n");
       reqSendMusicFile();
-      return true;
+      return 1;
 
     case ClientCommand::SEEK: {
       // std::cout << "Enter a time to seek to:\n >> ";
@@ -191,11 +194,11 @@ bool Client::handleStdinCommand() {
     default:
       // this section of code should never be reached
       std::cerr << "Error: Reached default case in Client::handleStdinCommand\nCommand " << input << " not handled but is in clientMapCommand\n";
-      exit(1);
+      return -1;
   }
   std::cout << " >> ";
   std::cout.flush();
-  return true;
+  return 1;
 }
 
 void Client::handleServerSongData_threaded(Message mes) {

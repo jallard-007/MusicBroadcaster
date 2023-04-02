@@ -118,7 +118,7 @@ private:
   /**
    * Handles all stdin input
   */
-  bool handleStdinCommands();
+  int handleStdinCommands();
 
   /**
    * 
@@ -174,7 +174,7 @@ public:
   /**
    * launch the room. Accepts incoming connections and manages the room
   */
-  void launchRoom();
+  bool launchRoom();
 
   /**
    * set ip

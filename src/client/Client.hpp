@@ -39,7 +39,7 @@ private:
 
   void sendMusicFile_threaded(uint8_t);
 
-  bool handleStdinCommand();
+  int handleStdinCommand();
 
   void handleServerSongData_threaded(Message mes);
 
@@ -59,7 +59,7 @@ public:
 
   bool initializeClient();
 
-  void handleClient();
+  int handleClient();
 };
 
 }
