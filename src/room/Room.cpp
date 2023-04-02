@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <thread>
 #include <unordered_map>
 #if _WIN32
@@ -25,8 +26,8 @@
 using namespace Commands;
 using namespace room;
 
-Room::Room(): ip{}, fdMax{}, hostSocket{},
-  threadRecvPipe{}, threadSendPipe{}, threadWaitAudioPipe{},
+Room::Room(): ip{}, fdMax{}, hostSocket{}, threadRecvPipe{},
+  threadSendPipe{}, threadWaitAudioPipe{}, startTime{},
   name{}, clients{}, queue{}, audioPlayer{}, master{} {}
 
 Room::~Room() {
@@ -208,9 +209,27 @@ void Room::processThreadFinishedSending() {
     });
   } else { // other wise its all good, continue
     // add the client's socket FD back to select
-    // check if any outstanding sending threads for this client
-    --t.p_client->sendingCount;
-    if (t.p_client->sendingCount == 0) {
+    
+    if (t.p_client->entriesTillSynced == 0) {
+      FD_SET(t.socketFD , &master);
+      return;
+    }
+
+    --t.p_client->entriesTillSynced;
+    if (t.p_client->entriesTillSynced == 0 && audioPlayer.isPlaying()) {
+      t.p_client->entriesTillSynced = true;
+      std::vector<std::byte> bytes{0};
+      bytes.resize(sizeof startTime);
+      std::copy(
+        reinterpret_cast<const std::byte*>(&startTime),
+        reinterpret_cast<const std::byte*>(&startTime) + sizeof startTime,
+        bytes.data()
+      );
+      Message message;
+      message.setCommand(Command::PLAY_NEXT);
+      message.setBodySize(sizeof startTime);
+      message.setBody(bytes);
+      t.p_client->getSocket().write(message.data(), message.size());
       FD_SET(t.socketFD , &master);
     }
   }
@@ -280,7 +299,6 @@ void Room::sendSongToAllClients(const RecvPipeData_t &next) {
       FD_CLR(client.getSocket().getSocketFD(), &master);
       // no need to send it back to the client that sent it
       if (client.getSocket().getSocketFD() != next.socketFD) {
-        ++client.sendingCount;
         std::thread thread = std::thread(
           &Room::sendSongDataToClient_threaded,
           this,
@@ -323,9 +341,19 @@ void Room::attemptPlayNext() {
   }
 
   DEBUG_P(std::cout << "sending play next message to all clients\n");
+  startTime = (int64_t)std::time(nullptr);
+  std::vector<std::byte> bytes{0};
+  bytes.resize(sizeof startTime);
+  std::copy(
+    reinterpret_cast<const std::byte*>(&startTime),
+    reinterpret_cast<const std::byte*>(&startTime) + sizeof startTime,
+    bytes.data()
+  );
   for (room::Client &client : clients) {
     Message message;
     message.setCommand(Command::PLAY_NEXT);
+    message.setBodySize(sizeof startTime);
+    message.setBody(bytes);
     client.getSocket().write(message.data(), message.size());
   }
   if (musicEntry != nullptr) {
@@ -488,32 +516,40 @@ void Room::handleConnectionRequests() {
   Music m;
   for (const MusicStorageEntry &entry : songs) {
     ++position;
-    m.setPath(entry.path);
-    
-    if (&entry == queue.getFront()) {
-      // decide if its worth it to send the first song
-    } else if (entry.sent > 0) {
+    if (entry.sent > 0) {
+      m.setPath(entry.path);
       auto data = m.getMemShared();
       if (data == nullptr) {
         continue;
       }
-      ++client.sendingCount;
+      client.entriesTillSynced = false;
       std::thread thread = std::thread(
         &Room::sendSongDataToClient_threaded,
-        this,
-        data,
-        &entry,
-        static_cast<uint8_t>(position),
-        &client
+        this, data, &entry, static_cast<uint8_t>(position), &client
       );
       thread.detach();
     }
   }
 
-  if (client.sendingCount == 0) {
+  if (audioPlayer.isPlaying()) {
+    std::vector<std::byte> bytes{0};
+    bytes.resize(sizeof startTime);
+    std::copy(
+      reinterpret_cast<const std::byte*>(&startTime),
+      reinterpret_cast<const std::byte*>(&startTime) + sizeof startTime,
+      bytes.data()
+    );
+    Message message;
+    message.setCommand(Command::PLAY_NEXT);
+    message.setBodySize(sizeof startTime);
+    message.setBody(bytes);
+    client.getSocket().write(message.data(), message.size());
+  }
+
+  if (client.entriesTillSynced) {
+    // add the client to the selector list
     FD_SET(client.getSocket().getSocketFD(), &master);
   }
-  // add the client to the selector list
 }
 
 void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {

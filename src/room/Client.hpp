@@ -7,6 +7,7 @@
 #define CLIENT_ENTRY_H
 
 #include <thread>
+#include <atomic>
 #include "../music/MusicStorage.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
@@ -22,7 +23,7 @@ namespace room {
   */
   class Client {
   public:
-    int sendingCount;
+    int entriesTillSynced;
     MusicStorageEntry *p_entry;
 
   private:

@@ -43,7 +43,7 @@ private:
 
   void handleServerSongData_threaded(Message mes);
 
-  void handleServerPlayNext();
+  void handleServerPlayNext(Message &mes);
 
   bool handleServerMessage();
 

@@ -62,8 +62,9 @@ void Message::setOptions(const std::byte byte) {
 
 /* Sets the vector */
 void Message::setBody(const std::vector<std::byte>& vector) {
+  contents.resize(SIZE_OF_HEADER);
+  contents.insert(contents.end(), vector.begin(), vector.end());
   contents.resize(SIZE_OF_HEADER + vector.size());
-  contents.insert(contents.begin() + 6, vector.begin(), vector.end());
 }
 
 /* Sets the body */

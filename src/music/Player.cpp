@@ -31,12 +31,8 @@ Player::Player(): shouldPlay{} {
 }
 
 Player::~Player() {
-  DEBUG_P(std::cout << "player destructor\n");
   pause();
-  DEBUG_P(std::cout << "player paused\n");
-  DEBUG_P(std::cout << "player waiting\n");
   wait();
-  DEBUG_P(std::cout << "player done waiting\n");
   out123_del(ao);
   mpg123_delete(mh);
   free(outBuffer);

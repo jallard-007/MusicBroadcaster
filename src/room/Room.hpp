@@ -72,6 +72,11 @@ private:
   int threadWaitAudioPipe[2];
 
   /**
+   * 
+  */
+  uint64_t startTime;
+
+  /**
    * name of the room, also not being used
   */
   std::string name;

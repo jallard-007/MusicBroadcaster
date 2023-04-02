@@ -215,10 +215,12 @@ void Client::handleServerSongData_threaded(Message mes) {
     if (!queue.makeTemp(musicEntry)) {
       std::cerr << "Error: makeTemp\n";
       t.fileDes *= -1;
+      return;
     }
     if (clientSocket.readAll(music.getVector().data(), bodySize) == 0) {
       std::cerr << "lost connection to room\n";
       t.fileDes *= -1;
+      return;
     }
     DEBUG_P(std::cout << "got song data\n");
 
@@ -231,35 +233,57 @@ void Client::handleServerSongData_threaded(Message mes) {
     // write the data to dis
     music.setPath(musicEntry->path);
     music.writeToPath();
-    musicEntry->entryMutex.unlock();
   };
 
-
-  process(mes.getBodySize());
+  if (musicEntry != nullptr) {
+    process(mes.getBodySize());
+    musicEntry->entryMutex.unlock();
+    DEBUG_P(std::cout << "unlocked entry mutex\n");
+  }
 
   ::write(threadPipe[1], reinterpret_cast<const void *>(&t), sizeof t);
 }
 
-void Client::handleServerPlayNext() {
+void Client::handleServerPlayNext(Message &mes) {
   DEBUG_P(std::cout << "play next message from server\n");
   if (audioPlayer.isPlaying()) {
     audioPlayer.pause();
   }
   if (shouldRemoveFirstOnNext) {
     DEBUG_P(std::cout << "remove front first\n");
+    queue.getFront()->entryMutex.unlock();
     queue.removeFront();
   }
+  const uint32_t timeSize = mes.getBodySize();
+  std::vector<std::byte> tempServerTime{timeSize};
+  if (!clientSocket.readAll(tempServerTime.data(), timeSize)) {
+    // error
+  }
   auto nextSongFileName = queue.getFront();
-
-  if (nextSongFileName != nullptr) {
-    DEBUG_P(std::cout << "feeding next\n");
-    audioPlayer.feed(nextSongFileName->path.c_str());
-    audioPlayer.play();
-    shouldRemoveFirstOnNext = true;
-  } else {
+  if (nextSongFileName == nullptr) {
     DEBUG_P(std::cout << "nothing to feed\n");
     shouldRemoveFirstOnNext = false;
+    return;
   }
+  DEBUG_P(std::cout << "waiting for entry mutex\n");
+  nextSongFileName->entryMutex.lock();
+  DEBUG_P(std::cout << "got entry mutex\n");
+  DEBUG_P(std::cout << "feeding next\n");
+  audioPlayer.feed(nextSongFileName->path.c_str());
+  audioPlayer.play();
+  
+  // calculate how far off we are from server time and seek to that point
+  int64_t roomTime{};
+  std::copy(
+    tempServerTime.data(),
+    tempServerTime.data() + sizeof roomTime,
+    reinterpret_cast<std::byte *>(&roomTime)
+  );
+  const int64_t diff = (int64_t)std::time(0) - roomTime;
+  if (diff > 0 && diff < 86400) {
+    audioPlayer.seek(static_cast<float>(diff));
+  }
+  shouldRemoveFirstOnNext = true;
 }
 
 bool Client::handleServerMessage() {
@@ -274,6 +298,7 @@ bool Client::handleServerMessage() {
   switch (command) {
     // always take the next queue entry, if there are none available, add one
     case Commands::Command::SONG_DATA: {
+      DEBUG_P(std::cout << "song data\n");
       FD_CLR(clientSocket.getSocketFD(), &master);
       std::thread thread = std::thread(&Client::handleServerSongData_threaded, this, mes);
       thread.detach();
@@ -281,7 +306,7 @@ bool Client::handleServerMessage() {
     }
     
     case Commands::Command::PLAY_NEXT: {
-      handleServerPlayNext();
+      handleServerPlayNext(mes);
       break;
     }
 
@@ -308,6 +333,7 @@ bool Client::handleServerMessage() {
     }
 
     default:
+      DEBUG_P(std::cout << "unknown server command: " << (int)command << "\n");
       break;
   }
   return true;
