@@ -56,7 +56,7 @@ public:
 
   MusicStorageEntry *addLocalAndLockEntry();
 
-  int getPositionInQueue(const MusicStorageEntry *) const;
+  int getPositionInQueue(const MusicStorageEntry *);
 
   [[nodiscard]] MusicStorageEntry *getFront();
 

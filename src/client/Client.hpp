@@ -31,7 +31,7 @@ private:
   fd_set master;
   ThreadSafeSocket clientSocket;
 
-  void processThreadFinished();
+  bool processThreadFinished();
 
   /**
   */
@@ -43,7 +43,7 @@ private:
 
   void handleServerSongData_threaded(Message mes);
 
-  void handleServerPlayNext(Message &mes);
+  bool handleServerPlayNext(Message &mes);
 
   bool handleServerMessage();
 

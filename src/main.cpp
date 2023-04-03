@@ -112,7 +112,7 @@ int main() {
       default:
         // this section of code should never be reached
         std::cerr << "Error: Reached default case in main\nCommand " << input << " not handled but is in mapCommand\n";
-        exit(1);
+        return 1;
     }
   }
 }

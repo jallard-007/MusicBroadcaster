@@ -76,7 +76,7 @@ size_t BaseSocket::read(std::byte *buffer, const size_t bufferSize) const {
   const ssize_t numReadBytes = recv(socketFD, buffer, bufferSize, 0);
   if (numReadBytes == -1) {
     fprintf(stderr, "recv: %s (%d)\n", strerror(errno), errno);
-    exit(1);
+    return 0;
   }
   return static_cast<size_t>(numReadBytes);
 }
@@ -87,7 +87,7 @@ size_t BaseSocket::readAll(std::byte *buffer, const size_t bufferSize) const {
     const ssize_t bytesRead = recv(socketFD, buffer + totalBytesRead, bufferSize - totalBytesRead, 0);
     if (bytesRead == -1) {
       fprintf(stderr, "recv: %s (%d)\n", strerror(errno), errno);
-      exit(1);
+      return 0;
     } else if (bytesRead == 0) {
       return 0;
     }
@@ -96,7 +96,7 @@ size_t BaseSocket::readAll(std::byte *buffer, const size_t bufferSize) const {
   if (totalBytesRead != bufferSize) {
     // should not be possible to reach here, but just in case...
     std::cerr << "Error reading from socket. Amount read does not match amount requested to read\n";
-    exit(1);
+    return 0;
   }
   return bufferSize;
 }

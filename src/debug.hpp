@@ -1,7 +1,7 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-// set to false to remove debug statements
+// set to true to add debug statements
 #define DEBUG false
 
 #if DEBUG

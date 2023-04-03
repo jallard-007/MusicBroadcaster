@@ -277,18 +277,21 @@ void Room::sendSongToAllClients(const RecvPipeData_t &next) {
     DEBUG_P(std::cout << "could not get mutex for song\n");
     return;
   }
+  DEBUG_P(std::cout << "got mutex for song\n");
   // 0 means we haven't started sending yet
   // 1 means that we have started sending, sent - 1 is the number of clients that it has been sent to
   next.p_entry->sent = 1;
   if (clients.empty() || (clients.size() == 1 && next.socketFD == clients.front().getSocket().getSocketFD())) {
     DEBUG_P(std::cout << "no one to send to\n");
     next.p_entry->entryMutex.unlock();
+    DEBUG_P(std::cout << "unlocked mutex for song\n");
     attemptPlayNext();
   } else {
     Music m;
     m.setPath(next.p_entry->path);
     auto data = m.getMemShared();
     next.p_entry->entryMutex.unlock();
+    DEBUG_P(std::cout << "unlocked mutex for song\n");
     int position = queue.getPositionInQueue(next.p_entry);
     if (position == -1) {
       std::cerr << "Error: entry not found\n";
@@ -331,17 +334,18 @@ void Room::attemptPlayNext() {
     return;
   }
   auto musicEntry = queue.getFront();
+  bool gotLock = false;
   if (musicEntry != nullptr){
-    if (!musicEntry->entryMutex.try_lock()) {
+    if (!(gotLock = musicEntry->entryMutex.try_lock())) {
       DEBUG_P(std::cout << "could not get queue entry mutex, cancelling\n");
-      return;
+    } else {
+      DEBUG_P(std::cout << "got queue entry mutex\n");
+      startTime = (int64_t)std::time(nullptr);
     }
-    DEBUG_P(std::cout << "got queue entry mutex\n");
   }
 
   DEBUG_P(std::cout << "sending play next message to all clients\n");
-  startTime = (int64_t)std::time(nullptr);
-  std::vector<std::byte> bytes{0};
+  std::vector<std::byte> bytes{};
   bytes.resize(sizeof startTime);
   std::copy(
     reinterpret_cast<const std::byte*>(&startTime),
@@ -355,7 +359,7 @@ void Room::attemptPlayNext() {
     message.setBody(bytes);
     client.getSocket().write(message.data(), message.size());
   }
-  if (musicEntry != nullptr) {
+  if (musicEntry != nullptr && gotLock) {
     DEBUG_P(std::cout << "feeding next in queue to audioPlayer\n");
     audioPlayer.feed(musicEntry->path.c_str());
     audioPlayer.play();
@@ -381,8 +385,8 @@ void Room::handleClientReqSongData_threaded(room::Client *p_client, uint32_t siz
     music.getVector().resize(sizeOfFile);
 
     std::byte *dataPointer = music.getVector().data();
-    const auto numBytesRead = static_cast<uint32_t>(socket.readAll(dataPointer, sizeOfFile));
-    if (numBytesRead <= 0) {
+    const size_t numBytesRead = socket.readAll(dataPointer, sizeOfFile);
+    if (numBytesRead == 0) {
       // either client disconnected half way through, or some other error. Scrap it
       DEBUG_P(std::cout << "error reading song from socket, removing entry from queue\n");
       queue.removeByAddress(t.p_entry);
@@ -421,8 +425,9 @@ void Room::handleClientReqAddQueue(room::Client &client) {
   // send a message back to client to confirm that they can continue to send the song
   int position = queue.getPositionInQueue(p_entry);
   if (position == -1) {
-    std::cerr << "Error: couldn't find the entry\n";
-    exit(1);
+    DEBUG_P(std::cout << "couldn't find the entry\n");
+    sendBasicResponse(client.getSocket(), Command::RES_ADD_TO_QUEUE_NOT_OK);
+    return;
   }
   client.p_entry = p_entry;
   sendBasicResponse(client.getSocket(), Command::RES_ADD_TO_QUEUE_OK, static_cast<std::byte>(position));
@@ -547,13 +552,13 @@ void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
       return;
     }
     t.p_entry->path = m.getPath();
-    t.p_entry->entryMutex.unlock();
-    DEBUG_P(std::cout << "unlocked entry mutex\n");
     std::cout << "Added song to queue\n";
   };
 
   if (t.p_entry != nullptr) {
     process();
+    t.p_entry->entryMutex.unlock();
+    DEBUG_P(std::cout << "unlocked entry mutex\n");
   }
 
   DEBUG_P(std::cout << "add local song to queue process done, writing to recv pipe: socketFD " << t.socketFD << "\n");
@@ -656,7 +661,7 @@ int Room::handleStdinCommands() {
     default:
       // this section of code should never be reached
       std::cerr << "Error: Reached default case in Room::handleStdinCommands\nCommand " << input << " not handled but is in clientMapCommand\n";
-      exit(1);
+      return -1;
   }
   std::cout << " >> ";
   std::cout.flush();
