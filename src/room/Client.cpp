@@ -1,9 +1,11 @@
 /**
  * @author Justin Nicolas Allard
  * Implementation file for server side client class
-*/
+ */
 
-#include <utility>
+/*
+* Rename as : ClientEntry (information storage for client)
+*/
 
 #include "Client.hpp"
 

@@ -3,21 +3,7 @@
  * Implementation file for socket class
 */
 
-#include <string>
-#include <vector>
-#include <cstring>
-#include <mutex>
-#include <iostream>
-#if _WIN32
-// windows includes
-#elif defined(__APPLE__) || defined(__unix__)
-#include <netdb.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#endif
-
 #include "ThreadSafeSocket.hpp"
-#include "BaseSocket.hpp"
 
 ThreadSafeSocket::ThreadSafeSocket():
   socketFD{}, readLock{}, writeLock{} {}
@@ -39,6 +25,7 @@ ThreadSafeSocket::~ThreadSafeSocket() {
   if (socketFD != 0) {
     close(socketFD);
   }
+  socketFD = 0;
 }
 
 bool ThreadSafeSocket::connect(const std::string &ip, const uint16_t port) {

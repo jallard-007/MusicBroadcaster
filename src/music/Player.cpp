@@ -3,12 +3,7 @@
  * Implementation file for player class
 */
 
-#include <out123.h>
-#include <mpg123.h>
-#include <thread>
-#include <iostream>
 #include "Player.hpp"
-#include "../debug.hpp"
 
 Player::Player(): shouldPlay{} {
   mh = mpg123_new(nullptr, nullptr);

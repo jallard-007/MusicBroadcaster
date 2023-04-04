@@ -1,4 +1,14 @@
-#include <iostream>
+/**
+ * @file Message.cpp
+ * @author Tyler Johnson (tjohn73@uwo.ca)
+ * @brief This is the implementation file for the Message class
+ * @version 0.1
+ * @date 2023-03-07
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
+
 #include "Message.hpp"
 
 /**
@@ -9,6 +19,8 @@
  * 4 bytes size (N)
  * N bytes body
 */
+
+#include <iostream>
 
 /* Simple constructor */
 Message::Message(): contents{SIZE_OF_HEADER, (std::byte)0} {}
@@ -71,10 +83,54 @@ void Message::setBody(const std::vector<std::byte>& vector) {
 void Message::setBodySize(const uint32_t size) {
   auto p_size = reinterpret_cast<const std::byte *>(&size);
   for (size_t i = 0; i + INDEX_START_SIZE < INDEX_END_SIZE; i++) {
-    contents.data()[i + INDEX_START_SIZE] = p_size[i];
+    contents[i + INDEX_START_SIZE] = p_size[i];
   }
 }
 
-const std::vector<std::byte> &Message::getMessage() {
+const std::vector<std::byte> &Message::getMessage() const {
   return contents;
+}
+
+const std::byte *Message::getBodyBegin() const {
+  return contents.data() + SIZE_OF_HEADER;
+}
+
+const std::byte *Message::getBodyEnd() const {
+  return contents.end().base();
+}
+
+/**
+ * @brief we will check if the message is good
+ * Don't use this to check if a message is bad. This is not what this is for
+ * 
+ * @param msg The message to check
+ * @return true The message is good
+ * @return false The message is not good. Does not mean bad, just means not good
+ */
+bool Message::good(const Message& msg) {
+    return msg.getCommand() == Commands::Command::GOOD_MSG;
+}
+
+/**
+ * @brief Check if the format was bad
+ * Don't use this to check if the message was good. This is not what this means
+ * 
+ * @param msg The message to check
+ * @return true True if the message was of bad format
+ * @return false If the format was okay, then it may be something else. Does not mean the message was good
+ */
+bool Message::badFormat(const Message& msg) {
+    return msg.getCommand() == Commands::Command::BAD_FORMAT;
+}
+
+/**
+ * @brief Check if the values in the message are bad
+ * Don't use this to check if the message is good.
+ * 
+ * @param msg The message to check 
+ * @return true If the message contains bad values
+ * @return false If the message does not contain bad values
+ */
+bool Message::badValues(const Message& msg) {
+    return msg.getCommand() == Commands::Command::BAD_VALUES;
 }

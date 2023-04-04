@@ -3,13 +3,21 @@
  * Header file for ThreadSafe socket class
 */
 
-#ifndef THREAD_SAFE_SOCKET_H
-#define THREAD_SAFE_SOCKET_H
+#pragma once
 
+#include <iostream>
 #include <cstddef>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <mutex>
+#if _WIN32
+// windows includes
+#elif defined(__APPLE__) || defined(__unix__)
+#include <netdb.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#endif
 
 #include "BaseSocket.hpp"
 
@@ -110,5 +118,3 @@ public:
   */
   size_t readAll(std::byte *buffer, size_t bufferSize);
 };
-
-#endif

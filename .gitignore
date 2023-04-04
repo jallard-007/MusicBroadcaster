@@ -7,3 +7,4 @@ examples/
 *.exe
 *.obj
 *.ilk
+DOCS/

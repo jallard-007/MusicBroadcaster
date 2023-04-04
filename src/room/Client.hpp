@@ -1,30 +1,29 @@
 /**
  * @author Justin Nicolas Allard
  * Header file for server side client class
-*/
+ */
 
-#ifndef CLIENT_ENTRY_H
-#define CLIENT_ENTRY_H
+#pragma once
 
 #include <thread>
-#include <atomic>
+#include <utility>
 #include "../music/MusicStorage.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
 /**
- * Namespace used to differentiate room (server side) client from client side client class
+ * @brief Namespace used to differentiate room (server side) client from client side client class
  * This is the room client
-*/
+ */
 namespace room { 
 
-  /**
-   * Server side client class. Used as an entry into the rooms list of connected clients
+   /**
+   * @brief Server side client class. Used as an entry into the rooms list of connected clients
    * Doesn't actually do anything, just holds information
-  */
+   */
   class Client {
   public:
     int entriesTillSynced;
-    MusicStorageEntry *p_entry;
+    MusicStorageEntry *p_entry{};
 
   private:
 
@@ -39,42 +38,45 @@ namespace room {
     ThreadSafeSocket socket;
 
   public:
+
+    /**
+     * @brief Construct a new Client object
+     * 
+     */
     Client();
 
     /**
-     * Constructor which takes the name of the client along with the socket associated with the client
+     * @brief Constructor which takes the name of the client along with the socket associated with the client
      * @param name name of client
      * @param socket socket associated with this client
-    */
+     */
     Client(std::string name, ThreadSafeSocket &&socket);
 
     /**
-     * Move constructor
-    */
+     * @brief Move constructor
+     */
     Client(Client &&moved) noexcept;
 
     /**
-     * Delete the copy constructor. This is because BaseSocket closes the file descriptor in its destructor so we cannot copy
-    */
+     * @brief Delete the copy constructor. This is because BaseSocket closes the file descriptor in its destructor so we cannot copy
+     */
     Client(const Client &) = delete;
 
     /**
-     * the equality operator
-    */
+     * @brief the equality operator
+     */
     bool operator==(const room::Client &rhs) const;
 
     /**
-     * Getter for name field
-    */
+     * @brief Getter for name field
+     */
     [[nodiscard]] const std::string &getName() const;
 
     /**
-     * Getter for socket
-    */
+     * @brief Getter for socket
+     */
     ThreadSafeSocket &getSocket();
 
   };
 
 }
-
-#endif

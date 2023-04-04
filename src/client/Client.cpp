@@ -1,25 +1,9 @@
 /**
  * @author Justin Nicolas Allard
  * Implementation file for client class
-*/
+ */
 
-#include <fstream>
-#include <iostream>
-#include <cstring>
-#include <cstddef>
-#include <utility>
-#include <unordered_map>
-#if _WIN32
-// windows includes
-#elif defined(__APPLE__) || defined(__unix__)
-#include <unistd.h>
-#include <sys/select.h>
-#endif
-
-#include "../debug.hpp"
 #include "Client.hpp"
-#include "../CLInput.hpp"
-#include "../messaging/Message.hpp"
 
 using namespace clnt;
 
@@ -40,10 +24,7 @@ Client::~Client() {
   }
 }
 
-bool Client::initializeClient() {
-  const uint16_t port = getPort();
-  std::string host;
-  getHost(host);
+bool Client::initializeClient(uint16_t port, const std::string &host) {
   if (!clientSocket.connect(host, port)) {
     return false;
   }
@@ -120,7 +101,6 @@ enum class ClientCommand {
   EXIT,
   QUIT,
   ADD_SONG,
-  SEEK,
   MUTE,
   UNMUTE
 };
@@ -131,7 +111,6 @@ const std::unordered_map<std::string, ClientCommand> clientCommandMap = {
   {"exit", ClientCommand::EXIT},
   {"quit", ClientCommand::QUIT},
   {"add song", ClientCommand::ADD_SONG},
-  {"seek", ClientCommand::SEEK},
   {"mute", ClientCommand::MUTE},
   {"unmute", ClientCommand::UNMUTE},
 };
@@ -139,7 +118,15 @@ const std::unordered_map<std::string, ClientCommand> clientCommandMap = {
 // TODO:
 void clientShowHelp() {
   std::cout <<
-  "List of commands as client:\n\n";
+  "List of commands as client:\n\n"
+  "'faq'       | Answers to frequently asked questions\n\n"
+  "'help'      | List commands and what they do.\n\n"
+  "'exit'      | Exit the room.\n\n"
+  "'quit'      | Quit the program.\n\n"
+  "'add song'  | Add a song to the queue.\n\n"
+  "'mute'      | Mute the audio player.\n\n"
+  "'unmute'    | Unmute the audio player.\n\n";
+  ;
 }
 
 // TODO:
@@ -179,18 +166,6 @@ int Client::handleStdinCommand() {
       DEBUG_P(std::cout << "add song command\n");
       reqSendMusicFile();
       return 1;
-
-    case ClientCommand::SEEK: {
-      // std::cout << "Enter a time to seek to:\n >> ";
-      // std::string input;
-      // std::getline(std::cin, input);
-      // char *endPtr;
-      // const auto time = strtof(input.c_str(), &endPtr);
-      // if (*endPtr == '\0') {
-      //   audioPlayer.seek(time);
-      // }
-      break;
-    }
 
     case ClientCommand::MUTE:
       audioPlayer.mute();
@@ -375,6 +350,10 @@ void Client::sendMusicFile_threaded(uint8_t position) {
     Music m;
     MusicStorageEntry *p_entry = queue.addAtIndexAndLock(position);
     getMP3FilePath(m);
+    if (clientSocket.getSocketFD() == 0) {
+      std::cerr << "Leaving room\n >> ";
+      return;
+    }
     if (m.getPath() == "-1") {
       Message header;
       header.setCommand((std::byte)Commands::Command::CANCEL_REQ_ADD_TO_QUEUE);
@@ -382,6 +361,8 @@ void Client::sendMusicFile_threaded(uint8_t position) {
         DEBUG_P(std::cout << "couldn't send \n");
         t.fileDes = -1;
       }
+      std::cout << " >> ";
+      std::cout.flush();
       return;
     }
 

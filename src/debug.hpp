@@ -1,5 +1,4 @@
-#ifndef DEBUG_H
-#define DEBUG_H
+#pragma once
 
 // set to true to add debug statements
 #define DEBUG false
@@ -8,6 +7,4 @@
 #define DEBUG_P(a) a
 #else
 #define DEBUG_P(a)
-#endif
-
 #endif

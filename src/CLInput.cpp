@@ -1,6 +1,3 @@
-#include <iostream>
-#include <string>
-
 #include "CLInput.hpp"
 
 uint16_t getPort() {
@@ -37,7 +34,17 @@ void getMP3FilePath(Music &m) {
       m.setPath(input);
       return;
     }
-    if (input.length() < 5 || input.substr(input.length() - 4) != ".mp3") {
+    if (input.length() < 5) {
+      std::cerr << "Error: not a valid mp3 file\n";
+      continue;
+    }
+    std::string data = input.substr(input.length() - 4);
+    std::transform(data.begin(), data.end(), data.begin(),
+      [](unsigned char c) { 
+        return std::tolower(c);
+      }
+    );
+    if (data != ".mp3") {
       std::cerr << "Error: not a valid mp3 file\n";
       continue;
     }

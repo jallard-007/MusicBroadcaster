@@ -9,6 +9,16 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <cstring>
+#include <iostream>
+
+#if _WIN32
+// windows includes
+#elif defined(__APPLE__) || defined(__unix__)
+#include <netdb.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#endif
 
 /**
  * Used to communicate over a network

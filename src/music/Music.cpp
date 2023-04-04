@@ -3,24 +3,7 @@
  * Implementation file for music class
 */
 
-#include <iostream>
-#include <fstream>
-#include <utility>
-#include <vector>
 #include "Music.hpp"
-
-Music::Music(std::string songName):
-  name{std::move(songName)}, path{}, bytes{} {}
-
-Music::Music(
-  std::string songName,
-  std::string filePath
-): name{std::move(songName)}, path{std::move(filePath)}, bytes{} {}
-
-Music::Music(
-  std::string songName,
-  const std::vector<std::byte> &buffer
-): name{std::move(songName)}, path{}, bytes{buffer} {}
 
 size_t Music::validateFile(FILE *fp) {
   if (fp == nullptr) {

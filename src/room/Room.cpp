@@ -1,27 +1,9 @@
 /**
  * @author Justin Nicolas Allard
  * Implementation file for room class
-*/
+ */
 
-#include <iostream>
-#include <vector>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <thread>
-#include <unordered_map>
-#if _WIN32
-// windows includes
-#elif defined(__APPLE__) || defined(__unix__)
-#include <sys/select.h>
-#include <unistd.h>
-#endif
-
-#include "../debug.hpp"
 #include "Room.hpp"
-#include "Client.hpp"
-#include "../CLInput.hpp"
-#include "../messaging/Message.hpp"
 
 using namespace Commands;
 using namespace room;
@@ -63,7 +45,18 @@ bool Room::initializeRoom() {
   const uint16_t port = getPort();
   std::string host;
   getHost(host);
-  //audioPlayer.mute();
+  if (host != "localhost") {
+    std::string name;
+    std::cout << "Optional: Enter a name to register under\n >> ";
+    std::getline(std::cin, name);
+    if (name != "") {
+      if (!TrackerAPI::add(name, IP(host), port)) {
+        std::cerr << "Could not register with the name '" << name << "'\n";
+        return false;
+      }
+    }
+  }
+
   if (!hostSocket.bind(host, port)) {
     return false;
   }
@@ -557,8 +550,10 @@ void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
 
   if (t.p_entry != nullptr) {
     process();
-    t.p_entry->entryMutex.unlock();
-    DEBUG_P(std::cout << "unlocked entry mutex\n");
+    if (t.p_entry != nullptr) {
+      t.p_entry->entryMutex.unlock();
+      DEBUG_P(std::cout << "unlocked entry mutex\n");
+    }
   }
 
   DEBUG_P(std::cout << "add local song to queue process done, writing to recv pipe: socketFD " << t.socketFD << "\n");
@@ -586,7 +581,6 @@ enum class RoomCommand {
   EXIT,
   QUIT,
   ADD_SONG,
-  SEEK,
   MUTE,
   UNMUTE
 };
@@ -597,7 +591,6 @@ const std::unordered_map<std::string, RoomCommand> roomCommandMap = {
   {"exit", RoomCommand::EXIT},
   {"quit", RoomCommand::QUIT},
   {"add song", RoomCommand::ADD_SONG},
-  {"seek", RoomCommand::SEEK},
   {"mute", RoomCommand::MUTE},
   {"unmute", RoomCommand::UNMUTE},
 
@@ -606,7 +599,15 @@ const std::unordered_map<std::string, RoomCommand> roomCommandMap = {
 // TODO:
 void roomShowHelp() {
   std::cout <<
-  "List of commands as room host:\n\n";
+  "List of commands as room host:\n\n"
+  "'faq'       | Answers to frequently asked questions\n\n"
+  "'help'      | List commands and what they do.\n\n"
+  "'exit'      | Exit the room.\n\n"
+  "'quit'      | Quit the program.\n\n"
+  "'add song'  | Add a song to the queue.\n\n"
+  "'mute'      | Mute the audio player.\n\n"
+  "'unmute'    | Unmute the audio player.\n\n";
+  ;
 }
 
 // TODO:
@@ -646,9 +647,6 @@ int Room::handleStdinCommands() {
       handleStdinAddSong();
       return true;
     }
-
-    case RoomCommand::SEEK:
-      break;
 
     case RoomCommand::MUTE:
       audioPlayer.mute();

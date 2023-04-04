@@ -1,17 +1,35 @@
 /**
+ * @file Client.hpp
  * @author Justin Nicolas Allard
- * Header file for client class
-*/
+ * @brief Header file for client class
+ * @version 1.4
+ * @date 2023-04-02
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 
-#ifndef CLIENT_CLASS_H
-#define CLIENT_CLASS_H
+#pragma once
 
+#include <fstream>
+#include <iostream>
 #include <string>
+#include <thread>
+#include <cstdlib>
+#include <unordered_map>
+#include <sys/select.h>
+#include <unistd.h>
 
-#include "../music/Player.hpp"
-#include "../messaging/Message.hpp"
-#include "../music/MusicStorage.hpp"
+#include "../socket/BaseSocket.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
+#include "../music/MusicStorage.hpp"
+#include "../messaging/Message.hpp"
+#include "../messaging/Commands.hpp"
+#include "../music/Player.hpp"
+#include "../music/Music.hpp"
+#include "../CLInput.hpp"
+#include "../debug.hpp"
+
 
 // client
 namespace clnt {
@@ -20,15 +38,29 @@ typedef struct {
   int fileDes;
 } PipeData_t;
 
+/**
+ * @brief Client class. Handles the client
+ * 
+ */
 class Client {
 private:
   bool shouldRemoveFirstOnNext;
   int fdMax;
   int threadPipe[2];
+
+  /**
+   * @brief The name of the client
+   * 
+   */
   std::string clientName;
   MusicStorage queue;
   Player audioPlayer;
   fd_set master;
+
+  /**
+   * @brief The socket associated with the client
+   * 
+   */
   ThreadSafeSocket clientSocket;
 
   bool processThreadFinished();
@@ -57,11 +89,9 @@ public:
   */
   explicit Client(std::string name);
 
-  bool initializeClient();
+  bool initializeClient(uint16_t, const std::string &);
 
   int handleClient();
 };
 
 }
-
-#endif

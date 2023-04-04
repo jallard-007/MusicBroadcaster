@@ -1,27 +1,38 @@
 /**
  * @author Justin Nicolas Allard
  * Header file for room class
-*/
+ */
 
-#ifndef ROOM_CLASS_H
-#define ROOM_CLASS_H
+#pragma once
 
 #include <string>
 #include <list>
 #include <mutex>
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <thread>
+#include <unordered_map>
 
 #if _WIN32
 // windows includes
 #elif defined(__APPLE__) || defined(__unix__)
 #include <sys/select.h>
+#include <unistd.h>
 #endif
 
 #include "Client.hpp"
 #include "../socket/BaseSocket.hpp"
 #include "../music/MusicStorage.hpp"
 #include "../music/Player.hpp"
+#include "../CLInput.hpp"
+#include "../debug.hpp"
+#include "../messaging/Message.hpp"
 #include "../messaging/Commands.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
+#include "../tracker/TrackerAPI.hpp"
 
 namespace room {
 
@@ -102,7 +113,7 @@ private:
   fd_set master;
 
   /**
-   * Handles connection requests
+   * @brief Handles connection requests
   */
   void handleConnectionRequests();
 
@@ -116,7 +127,7 @@ private:
 
 
   /**
-   * Handles incoming messages from the client.
+   * @brief Handles incoming messages from the client.
    * @param client reference to client object
    * @returns false if the client should be removed, true otherwise
   */
@@ -127,7 +138,7 @@ private:
   void handleStdinAddSong();
 
   /**
-   * Handles all stdin input
+   * @brief Handles all stdin input
   */
   int handleStdinCommands();
 
@@ -142,7 +153,7 @@ private:
   void processThreadFinishedSending();
 
   /**
-   * Sends song data to a specific client
+   * @brief Sends song data to a specific client
   */
   void sendSongDataToClient_threaded(
     std::shared_ptr<Music> audio,
@@ -152,7 +163,7 @@ private:
   );
 
   /**
-   * Attempts to send the next song to all clients client
+   * @brief Attempts to send the next song to all clients client
   */
   void sendSongToAllClients(const RecvPipeData_t &);
 
@@ -161,7 +172,7 @@ private:
   void attemptPlayNext();
 
   /**
-   * Sends a header only response to the client
+   * @brief Sends a header only response to the client
    * @param socket socket to send to
    * @param responseCommand one of the responses define in Commands.hpp
   */
@@ -170,36 +181,36 @@ private:
 public:
 
   /**
-   * Default Constructor
+   * @brief Default Constructor
   */
   Room();
 
   ~Room();
 
   /**
-   * Initializes the room, preparing it to launch
+   * @brief Initializes the room, preparing it to launch
    * @returns false on error, true on success
   */
   bool initializeRoom();
 
   /**
-   * launch the room. Accepts incoming connections and manages the room
+   * @brief launch the room. Accepts incoming connections and manages the room
   */
   bool launchRoom();
 
   /**
-   * set ip
+   * @brief set ip
    * @param newIp new ip number
   */
   void setIp(int newIp);
 
   /**
-   * print all clients
+   * @brief print all clients
   */
   void printClients();
 
   /**
-   * add a client
+   * @brief add a client
    * @param client client object to add
    * @returns reference to client which was added
   */
@@ -218,5 +229,3 @@ public:
 };
 
 }
-
-#endif

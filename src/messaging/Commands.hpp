@@ -1,8 +1,22 @@
-#ifndef COMMANDS_H
-#define COMMANDS_H
+/**
+ * @file Commands.hpp
+ * @author Tyler Johnson (tjohn73@uwo.ca)
+ * @brief This will handle creating commands for the room or tracker
+ * @version 2.0
+ * @date 2023-03-07
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
+
+#pragma once
 
 namespace Commands {
 
+/**
+ * @brief This represents the commands that can be sent to the room or tracker
+ * 
+ */
 enum class Command : std::underlying_type_t<std::byte> {
     JOIN, /* Will be used to join the server */
     LEAVE, /* Tells the room that the client is leaving */
@@ -61,5 +75,3 @@ enum class Command : std::underlying_type_t<std::byte> {
 #define JOIN_NAME (std::byte)1 /* With this option, a name should be in the body as a null terminated string */
 
 }
-
-#endif

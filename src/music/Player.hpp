@@ -1,17 +1,25 @@
 /**
+ * @file Player.hpp
  * @author Justin Nicolas Allard
- * Header file for player class
-*/
+ * @brief This plays the song
+ * @version 1.3
+ * @date 2023-04-02
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 
-#ifndef PLAYER_H
-#define PLAYER_H
+#pragma once
 
 #include <out123.h>
 #include <mpg123.h>
 #include <thread>
 #include <atomic>
 #include <cstddef>
+#include <iostream>
+
 #include "Music.hpp"
+#include "../debug.hpp"
 
 #define BITS 8
 
@@ -49,41 +57,69 @@ private:
   std::thread player;
 
 public:
-  Player();
+  
+  /**
+   * @brief Construct a new Player object
+   * 
+   */
+  Player(); 
+
+  /**
+   * @brief Destroy the Player object
+   * 
+   */
   ~Player();
 
   /**
-   * feed audio data to mpg123
-   * @param fp 
+   * @brief feed audio data to mpg123
+   * @param fp path to file, ex: /tmp/musicBroadcaster_XXXXX
   */
   void feed(const char *fp);
 
   /**
-   * plays audio which as been fed to mpg123
+   * @brief plays audio which as been fed to mpg123
   */
   void play();
 
   /**
-   * pauses audio
+   * @brief pauses audio
   */
   void pause();
 
   /**
-   * waits for the player thread to finish execution (no more audio to play, or some error occurs)
+   * @brief waits for the player thread to finish execution (no more audio to play, or some error occurs)
   */
   void wait();
 
+  /**
+   * @brief mute audio
+  */
   void mute();
 
+  /**
+   * @brief unmute audio
+  */
   void unmute();
 
+  /**
+   * @brief seek to a time in the track
+   * @param time time in seconds to seek to
+  */
   void seek(double time);
 
+  /**
+   * @brief check if audio is playing
+  */
   bool isPlaying();
 
 private:
+  /**
+   * @brief actually plays audio
+  */
   void _play();
+
+  /**
+   * @brief handles a new mp3 format
+  */
   void _newFormat();
 };
-
-#endif
