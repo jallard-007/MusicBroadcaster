@@ -20,8 +20,6 @@
  * N bytes body
 */
 
-#include <iostream>
-
 /* Simple constructor */
 Message::Message(): contents{SIZE_OF_HEADER, (std::byte)0} {}
 

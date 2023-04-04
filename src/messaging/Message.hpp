@@ -158,13 +158,13 @@ public:
   /**
    * @return pointer to start of the body
   */
-  const std::byte *getBodyBegin() const;
+  [[nodiscard]] const std::byte *getBodyBegin() const;
   /**
    * content.end().base()
    * @return pointer to the element one after the last in this message
    * 
   */
-  const std::byte *getBodyEnd() const;
+  [[nodiscard]] const std::byte *getBodyEnd() const;
 
   /**
    * @brief we will check if the message is good

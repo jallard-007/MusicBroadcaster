@@ -5,9 +5,6 @@
 
 #include "ThreadSafeSocket.hpp"
 
-ThreadSafeSocket::ThreadSafeSocket():
-  socketFD{}, readLock{}, writeLock{} {}
-
 ThreadSafeSocket::ThreadSafeSocket(const int socketFD):
   socketFD{socketFD}, readLock{}, writeLock{} {}
 
@@ -23,7 +20,11 @@ ThreadSafeSocket::ThreadSafeSocket(ThreadSafeSocket &&moved) noexcept:
 
 ThreadSafeSocket::~ThreadSafeSocket() {
   if (socketFD != 0) {
-    close(socketFD);
+#if _WIN32
+  closesocket(socketFD);
+#elif defined(__APPLE__) || defined(__unix__)
+  close(socketFD);
+#endif
   }
   socketFD = 0;
 }

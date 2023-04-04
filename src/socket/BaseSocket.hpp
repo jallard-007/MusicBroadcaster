@@ -13,7 +13,11 @@
 #include <iostream>
 
 #if _WIN32
-// windows includes
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
 #elif defined(__APPLE__) || defined(__unix__)
 #include <netdb.h>
 #include <unistd.h>

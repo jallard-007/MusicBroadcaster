@@ -21,8 +21,6 @@
 #include "Music.hpp"
 #include "../debug.hpp"
 
-#define BITS 8
-
 class Player {
 private:
 

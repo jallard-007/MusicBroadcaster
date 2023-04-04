@@ -49,7 +49,7 @@ bool Room::initializeRoom() {
     std::string name;
     std::cout << "Optional: Enter a name to register under\n >> ";
     std::getline(std::cin, name);
-    if (name != "") {
+    if (!name.empty()) {
       if (!TrackerAPI::add(name, IP(host), port)) {
         std::cerr << "Could not register with the name '" << name << "'\n";
         return false;

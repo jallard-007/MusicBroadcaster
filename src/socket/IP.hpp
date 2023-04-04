@@ -13,7 +13,7 @@
 
 #include <string>
 #include <sstream>
-#include <stdint.h>
+#include <cstdint>
 
 /**
  * @brief This class will hold the IP address and handle conversions
@@ -54,14 +54,14 @@ public:
      * 
      * @param ip The IP 
      */
-    IP(uint32_t ip);
+    explicit IP(uint32_t ip);
 
     /**
      * @brief Construct a new IP object using the string
      * 
      * @param ip String format of the IP address
      */
-    IP(const std::string& ip);
+    explicit IP(const std::string& ip);
 
     /**
      * @brief Default construction. Will set IP to 0.0.0.0
@@ -80,14 +80,14 @@ public:
      * 
      * @return const std::string& The string format of the IP
      */
-    const std::string& str() const;
+    [[nodiscard]] const std::string& str() const;
 
     /**
      * @brief Returns the IP in uint32_t format
      * 
      * @return uint32_t The IP address
      */
-    uint32_t compressed() const;
+    [[nodiscard]] uint32_t compressed() const;
 
     /**
      * @brief Sets the IP address using the uint32_t format

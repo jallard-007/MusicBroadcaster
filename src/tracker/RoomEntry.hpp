@@ -12,7 +12,7 @@
 #pragma once
 
 #include <string>
-#include <stdint.h>
+#include <cstdint>
 
 #include "../socket/IP.hpp"
 
@@ -61,8 +61,6 @@ public:
     */
     ~RoomEntry() = default;
 
-
-
     /**
      * @brief Sets the name of the room
      * 
@@ -90,21 +88,21 @@ public:
     * 
     * @return std::string The name of the room
     */
-    const std::string& getName() const noexcept;
+    [[nodiscard]] const std::string& getName() const noexcept;
 
     /**
     * @brief Get the Ip object
     * 
     * @return IP The ip of the room
     */
-    const IP& getIP() const noexcept;
+    [[nodiscard]] const IP& getIP() const noexcept;
 
     /**
     * @brief Get the Port object
     * 
     * @return uin16_t The port of the room
     */
-    uint16_t getPort() const noexcept;
+    [[nodiscard]] uint16_t getPort() const noexcept;
 
 
 };

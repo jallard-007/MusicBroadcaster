@@ -10,6 +10,28 @@
 #include "./room/Room.hpp"
 #include "./client/Client.hpp"
 
+void winSocketInitialize() {
+#if _WIN32
+  WSADATA wsaData;
+
+  if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+    fprintf(stderr, "WSAStartup failed.\n");
+    exit(1);
+  }
+  if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2) {
+    std::cerr << "Version 2.2 of Winsock is not available.\n";
+    WSACleanup();
+    exit(1);
+  }
+#endif
+}
+
+void closeWinSocket() {
+#if _WIN32
+  WSACleanup();
+#endif
+}
+
 /**
  * show help information
 */
@@ -63,6 +85,7 @@ const std::unordered_map<std::string, Command> commandMap = {
 };
 
 int main() {
+  winSocketInitialize();
   std::string input;
   while (true) {
     std::cout << " >> ";
@@ -87,6 +110,7 @@ int main() {
         break;
 
       case Command::EXIT:
+        closeWinSocket();
         return 0;
       
       case Command::MAKE_ROOM: {
@@ -94,6 +118,7 @@ int main() {
         room::Room room;
         if (room.initializeRoom()) {
           if (!room.launchRoom()) {
+            closeWinSocket();
             return 0;
           }
         }
@@ -108,6 +133,7 @@ int main() {
         clnt::Client client;
         if (client.initializeClient(port, host)) {
           if (!client.handleClient()) {
+            closeWinSocket();
             return 0;
           }
         }
@@ -120,13 +146,14 @@ int main() {
         std::cout << "Enter the name of the room\n >> ";
         getline(std::cin, name);
         RoomEntry roomEntry = TrackerAPI::lookup(name);
-        if (roomEntry.getPort() == 0 && roomEntry.getName() == "" ) {
+        if (roomEntry.getPort() == 0 && roomEntry.getName().empty() ) {
           std::cerr << "No room found under the name '" << name << "'\n";
           break;
         }
         clnt::Client client;
         if (client.initializeClient(roomEntry.getPort(), roomEntry.getIP().str())) {
           if (!client.handleClient()) {
+            closeWinSocket();
             return 0;
           }
         }
@@ -136,9 +163,11 @@ int main() {
       default:
         // this section of code should never be reached
         std::cerr << "Error: Reached default case in main\nCommand " << input << " not handled but is in mapCommand\n";
+        closeWinSocket();
         return 1;
     }
   }
+  closeWinSocket();
 }
 
 /* tests

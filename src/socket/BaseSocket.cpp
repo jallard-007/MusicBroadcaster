@@ -10,7 +10,11 @@ BaseSocket::BaseSocket(const int socketFD):
 
 BaseSocket::~BaseSocket() {
   if (socketFD != 0) {
-    close(socketFD);
+#if _WIN32
+  closesocket(socketFD);
+#elif defined(__APPLE__) || defined(__unix__)
+  close(socketFD);
+#endif
   }
   socketFD = 0;
 }

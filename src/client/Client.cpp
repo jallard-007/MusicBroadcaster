@@ -192,7 +192,7 @@ void Client::handleServerSongData_threaded(Message mes) {
   auto process = [this, &musicEntry, &t](uint32_t bodySize) {
     Music music;
     music.getVector().resize(bodySize);
-    if (!queue.makeTemp(musicEntry)) {
+    if (!MusicStorage::makeTemp(musicEntry)) {
       std::cerr << "Error: makeTemp\n";
       t.fileDes *= -1;
       return;
@@ -263,7 +263,7 @@ bool Client::handleServerPlayNext(Message &mes) {
     tempServerTime.data() + sizeof roomTime,
     reinterpret_cast<std::byte *>(&roomTime)
   );
-  const int64_t diff = (int64_t)std::time(0) - roomTime;
+  const int64_t diff = (int64_t)std::time(nullptr) - roomTime;
   if (diff > 0 && diff < 86400) {
     audioPlayer.seek(static_cast<double>(diff));
   }
