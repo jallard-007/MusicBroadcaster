@@ -449,6 +449,7 @@ bool Room::handleClientRequests(room::Client &client) {
   std::byte requestHeader[SIZE_OF_HEADER];
   const size_t numBytesRead = client.getSocket().readAll(requestHeader, SIZE_OF_HEADER);
   if (numBytesRead == 0) {
+    handleCancelReqAddQueue(client.p_entry);
     return false;
   }
   DEBUG_P(std::cout << "read client request\n");

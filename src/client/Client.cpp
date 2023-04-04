@@ -247,8 +247,13 @@ bool Client::handleServerPlayNext(Message &mes) {
     shouldRemoveFirstOnNext = false;
     return true;
   }
+  if (nextSongEntry->path.empty()) {
+    DEBUG_P(std::cout << "song not received yet\n");
+    shouldRemoveFirstOnNext = false;
+    return true;
+  }
   if (!nextSongEntry->entryMutex.try_lock()) {
-    DEBUG_P(std::cout << "could not get entry mutex\n");
+    DEBUG_P(std::cout << "could not get entry mutex, song is being received\n");
     shouldRemoveFirstOnNext = false;
     return true;
   }
