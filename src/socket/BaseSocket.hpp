@@ -17,6 +17,7 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+typedef SSIZE_T ssize_t;
 
 #elif defined(__APPLE__) || defined(__unix__)
 #include <netdb.h>

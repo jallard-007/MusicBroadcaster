@@ -184,7 +184,7 @@ RoomEntry TrackerAPI::lookup(const std::string& name) {
             ((std::byte *)&port)[port_index++] = resulting_body[index];
 
         /* Return the ip and port */
-        return RoomEntry(name, ip, port);
+        return RoomEntry(name, IP{ip}, port);
 
     }
 

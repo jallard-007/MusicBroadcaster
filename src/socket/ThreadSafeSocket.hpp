@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <string>
 #include <cstring>
+#include <cstdint>
 #include <vector>
 #include <mutex>
 #if _WIN32
@@ -16,6 +17,7 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+typedef SSIZE_T ssize_t;
 
 #elif defined(__APPLE__) || defined(__unix__)
 #include <netdb.h>
@@ -24,6 +26,7 @@
 #endif
 
 #include "BaseSocket.hpp"
+#include "../messaging/Message.hpp"
 
 /**
  * Used to communicate over a network. Same as BaseSocket class, but adds a mutex lock to reading and writing

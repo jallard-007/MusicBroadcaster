@@ -12,6 +12,7 @@
 
 #include <list>
 #include <memory>
+#include <atomic>
 #include <regex>
 #include <mutex>
 #include <string>

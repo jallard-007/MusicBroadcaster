@@ -72,11 +72,11 @@ bool ThreadSafeSocket::write(const std::byte *data, const size_t dataSize) {
 
 bool ThreadSafeSocket::writeHeaderAndData(const std::byte header[6], const std::byte *data, size_t dataSize) {
    std::unique_lock<std::mutex> lock(writeLock);
-   if (send(socketFD, header, 6, 0) == -1) {
+   if (send(socketFD, reinterpret_cast<const char *>(header), 6, 0) == -1) {
     fprintf(stderr, "send: %s (%d)\n", strerror(errno), errno);
     return false;
   }
-  if (send(socketFD, data, dataSize, 0) == -1) {
+  if (send(socketFD, reinterpret_cast<const char *>(data), dataSize, 0) == -1) {
     fprintf(stderr, "send: %s (%d)\n", strerror(errno), errno);
     return false;
   }
@@ -86,7 +86,7 @@ bool ThreadSafeSocket::writeHeaderAndData(const std::byte header[6], const std::
 
 size_t ThreadSafeSocket::read(std::byte *buffer, const size_t bufferSize) {
   std::unique_lock<std::mutex> lock{readLock};
-  const ssize_t numReadBytes = recv(socketFD, buffer, bufferSize, 0);
+  const ssize_t numReadBytes = recv(socketFD, reinterpret_cast<char *>(buffer), bufferSize, 0);
   if (numReadBytes == -1) {
     fprintf(stderr, "recv: %s (%d)\n", strerror(errno), errno);
     return 0;
@@ -98,7 +98,7 @@ size_t ThreadSafeSocket::readAll(std::byte *buffer, const size_t bufferSize) {
   std::unique_lock<std::mutex> lock{readLock};
   size_t totalBytesRead = 0;
   do {
-    const ssize_t bytesRead = recv(socketFD, buffer + totalBytesRead, bufferSize - totalBytesRead, 0);
+    const ssize_t bytesRead = recv(socketFD, reinterpret_cast<char *>(buffer) + totalBytesRead, bufferSize - totalBytesRead, 0);
     if (bytesRead == -1) {
       fprintf(stderr, "recv: %s (%d)\n", strerror(errno), errno);
       return 0;

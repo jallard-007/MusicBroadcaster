@@ -66,7 +66,7 @@ bool BaseSocket::write(const std::byte *data, const size_t dataSize) const {
 }
 
 size_t BaseSocket::read(std::byte *buffer, const size_t bufferSize) const {
-  const ssize_t numReadBytes = recv(socketFD, buffer, bufferSize, 0);
+  const ssize_t numReadBytes = recv(socketFD, reinterpret_cast<char *>(buffer), bufferSize, 0);
   if (numReadBytes == -1) {
     fprintf(stderr, "recv: %s (%d)\n", strerror(errno), errno);
     return 0;
@@ -77,7 +77,7 @@ size_t BaseSocket::read(std::byte *buffer, const size_t bufferSize) const {
 size_t BaseSocket::readAll(std::byte *buffer, const size_t bufferSize) const {
   size_t totalBytesRead = 0;
   do {
-    const ssize_t bytesRead = recv(socketFD, buffer + totalBytesRead, bufferSize - totalBytesRead, 0);
+    const ssize_t bytesRead = recv(socketFD, reinterpret_cast<char *>(buffer) + totalBytesRead, bufferSize - totalBytesRead, 0);
     if (bytesRead == -1) {
       fprintf(stderr, "recv: %s (%d)\n", strerror(errno), errno);
       return 0;

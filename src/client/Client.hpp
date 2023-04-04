@@ -17,8 +17,16 @@
 #include <thread>
 #include <cstdlib>
 #include <unordered_map>
-#include <sys/select.h>
+#if _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#elif defined(__APPLE__) || defined(__unix__)
 #include <unistd.h>
+#include <sys/select.h>
+#endif
 
 #include "../socket/BaseSocket.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
