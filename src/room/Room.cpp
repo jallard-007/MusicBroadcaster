@@ -169,7 +169,7 @@ bool Room::launchRoom() {
 
 void Room::processThreadFinishedReceiving() {
   DEBUG_P(std::cout << "data from recv pipe\n");
-  RecvPipeData_t t;
+  PipeData_t t;
   ::read(threadRecvPipe[0], reinterpret_cast<void *>(&t), sizeof t);
 
   if (t.socketFD < 0) { // when true, means that we need to remove that client
@@ -183,6 +183,9 @@ void Room::processThreadFinishedReceiving() {
   }
   if (t.p_entry != nullptr) {
     sendSongToAllClients(t);
+    if (t.p_client != nullptr) {
+      t.p_client->p_entry = nullptr;
+    }
   } else {
     // this should only be reached when room host cancels adding a song to the queue
     DEBUG_P(std::cout << "adding was cancelled, now adding client " << t.socketFD << " back to master\n");
@@ -192,7 +195,7 @@ void Room::processThreadFinishedReceiving() {
 }
 
 void Room::processThreadFinishedSending() {
-  SendPipeData_t t;
+  PipeData_t t;
   ::read(threadSendPipe[0], reinterpret_cast<void *>(&t), sizeof t);
   if (t.socketFD < 0) { // when true, means that we need to remove that client
     t.socketFD  *= -1;
@@ -234,7 +237,7 @@ void Room::sendSongDataToClient_threaded(
   room::Client *p_client
 ) {
   auto &clientSocket = p_client->getSocket();
-  SendPipeData_t t {
+  PipeData_t t {
     clientSocket.getSocketFD(),
     p_client,
     const_cast<MusicStorageEntry *>(p_queue)
@@ -256,7 +259,7 @@ void Room::sendSongDataToClient_threaded(
   ::write(threadSendPipe[1], reinterpret_cast<const void *>(&t), sizeof t);
 }
 
-void Room::sendSongToAllClients(const RecvPipeData_t &next) {
+void Room::sendSongToAllClients(const PipeData_t &next) {
   DEBUG_P(std::cout << "sending song to all clients\n");
   if (next.p_entry == nullptr) {
     DEBUG_P(std::cout << "song is nullptr\n");
@@ -365,8 +368,9 @@ void Room::attemptPlayNext() {
 
 void Room::handleClientReqSongData_threaded(room::Client *p_client, uint32_t sizeOfFile) {
   ThreadSafeSocket &socket = p_client->getSocket();
-  RecvPipeData_t t{};
+  PipeData_t t{};
   t.socketFD = socket.getSocketFD();
+  t.p_client = p_client;
   t.p_entry = p_client->p_entry;
 
   auto process = [this, &socket, &t, sizeOfFile]() {
@@ -536,7 +540,7 @@ void Room::handleConnectionRequests() {
 }
 
 void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
-  RecvPipeData_t t{0, queueEntry};
+  PipeData_t t{0, nullptr, queueEntry};
   auto process = [&t, this]() {
     Music m;
     getMP3FilePath(m);

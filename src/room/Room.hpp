@@ -40,12 +40,7 @@ typedef struct {
   int socketFD;
   room::Client *p_client;
   MusicStorageEntry *p_entry;
-} SendPipeData_t;
-
-typedef struct {
-  int socketFD;
-  MusicStorageEntry *p_entry;
-} RecvPipeData_t;
+} PipeData_t;
 
 class Room {
 private:
@@ -165,7 +160,7 @@ private:
   /**
    * @brief Attempts to send the next song to all clients client
   */
-  void sendSongToAllClients(const RecvPipeData_t &);
+  void sendSongToAllClients(const PipeData_t &);
 
   void waitOnAudio_threaded();
 
