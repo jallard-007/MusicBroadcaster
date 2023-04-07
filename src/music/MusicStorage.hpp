@@ -100,7 +100,7 @@ public:
   ~MusicStorage();
 
   /** 
-   * @brief Adds and entry at the the specified index in the queue and locks it's mutex
+   * @brief Adds an entry at the the specified index in the queue and locks it's mutex
    * 
    * @return pointer to the entry
    */
@@ -116,14 +116,14 @@ public:
 
 
   /** 
-   * @brief Adds and entry, which has it's path set to a new temp file, at the end of the queue and locks it's mutex
+   * @brief Adds an entry at the end of the queue, sets it's path set to a new temp file, and locks it's mutex
    * 
    * @return pointer to the entry
    */
-  MusicStorageEntry *addAndLockEntry();
+  MusicStorageEntry *addTempAndLockEntry();
 
   /** 
-   * @brief Adds and entry at the end of the queue and locks it's mutex
+   * @brief Adds an entry at the end of the queue and locks it's mutex
    * 
    * @return pointer to the entry
    */
@@ -131,7 +131,7 @@ public:
 
 
   /**
-   * @brief Get the position of am entry in the queue
+   * @brief Get the position of an entry in the queue
    * 
    * @param entry pointer to the entry
    * @return the position in the queue (0 being first)

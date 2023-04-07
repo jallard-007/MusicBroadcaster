@@ -97,7 +97,7 @@ MusicStorageEntry *MusicStorage::addLocalAndLockEntry() {
   return add("path", -1);
 }
 
-MusicStorageEntry *MusicStorage::addAndLockEntry() {
+MusicStorageEntry *MusicStorage::addTempAndLockEntry() {
   char s[] = "/tmp/musicBroadcaster_XXXXXX";
   int filedes = mkstemp(s);
   if (filedes < 1) {

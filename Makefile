@@ -55,7 +55,7 @@ obj/BaseSocket.o: src/socket/BaseSocket.cpp src/socket/BaseSocket.hpp
 	$(GXX) $(GXXFLAGS) -c $< -o $@
 
 # src/socket
-obj/ThreadSafeSocket.o: src/socket/ThreadSafeSocket.cpp src/socket/ThreadSafeSocket.hpp src/debug.hpp
+obj/ThreadSafeSocket.o: src/socket/ThreadSafeSocket.cpp src/socket/ThreadSafeSocket.hpp
 	$(GXX) $(GXXFLAGS) -c $< -o $@
 
 # The Tracker API

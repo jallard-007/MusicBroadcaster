@@ -61,24 +61,22 @@ private:
   BaseSocket hostSocket;
 
   /**
-   * Pipe to communicate from child threads to parent thread.
-   * This is used to allow child threads to notify when they have completed with select
+   * Pipe to communicate from child threads to parent thread
   */
   int threadRecvPipe[2];
 
   /**
-   * Pipe to communicate from child threads to parent thread.
-   * This is used to allow child threads to notify when they have completed with select
+   * Pipe to communicate from child threads to parent thread
   */
   int threadSendPipe[2];
 
   /**
-   * 
+   * Pipe to communicate from child threads to parent thread
   */
   int threadWaitAudioPipe[2];
 
   /**
-   * 
+   * When the current song started playing to the nearest second
   */
   int64_t startTime;
 
@@ -108,18 +106,27 @@ private:
   fd_set master;
 
   /**
+   * @brief Removes an entry from the queue, sends all clients a Command::REMOVE_QUEUE_ENTRY, calls Room::attemptPlayNext
+  */
+  void handleRemoveQueueEntry(MusicStorageEntry *);
+
+  /**
    * @brief Handles connection requests
   */
   void handleConnectionRequests();
 
-  void handleCancelReqAddQueue(MusicStorageEntry *);
-
   /**
-  */
+   * @brief Handles external client's request of SONG_DATA
+   * @details Threaded function which reads sizeOfFile bytes from p_client
+   * @param p_client a pointer to the client in which to read data from
+   * @param sizeOfFile the size of the aud
+   */
   void handleClientReqSongData_threaded(room::Client *p_client, uint32_t sizeOfFile);
 
+  /**
+   * @brief Handles external client's request of REQ_ADD_TO_QUEUE
+  */
   void handleClientReqAddQueue(room::Client &client);
-
 
   /**
    * @brief Handles incoming messages from the client.
@@ -128,27 +135,45 @@ private:
   */
   bool handleClientRequests(room::Client& client);
 
-  void handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry);
+  /**
+   * @brief Helper to Room::handleStdinAddSong
+   * @details Threaded function, allows the room to continue managing requests from other clients,
+   * while still getting the correct input from the room host
+   * @param p_entry a pointer to an entry in the queue
+  */
+  void handleStdinAddSongHelper_threaded(MusicStorageEntry *p_entry);
 
+  /**
+   * @brief Handles the stdin 'add song' command
+  */
   void handleStdinAddSong();
 
   /**
    * @brief Handles all stdin input
+   * @details Generally, just reads in one line from stdin and calls other,
+   * more focused functions to handle specific commands
   */
   int handleStdinCommands();
 
   /**
-   * 
+   * @brief Handles when a thread finishes receiving song data
+   * @details More specifically, this is called in the main thread when there is data to be read from the threadRecvPipe
   */
   void processThreadFinishedReceiving();
 
   /**
-   * 
+   * @brief Handles when a thread finishes sending song data
+   * @details More specifically, this is called in the main thread when there is data to be read from the threadSendPipe
   */
   void processThreadFinishedSending();
 
   /**
    * @brief Sends song data to a specific client
+   * 
+   * @param audio a shared Music object in which the data to be sent is stored
+   * @param p_queue a pointer to the MusicStorageEntry object which corresponds to the song being sent
+   * @param queuePosition the MusicStorageEntry's position in the queue
+   * @param p_client a pointer to the room::Client object to send the data to
   */
   void sendSongDataToClient_threaded(
     std::shared_ptr<Music> audio,
@@ -162,8 +187,14 @@ private:
   */
   void sendSongToAllClients(const PipeData_t &);
 
+  /**
+   * @brief waits for audio to stop playing, then notifies the main thread via Room::threadWaitAudioPipe
+  */
   void waitOnAudio_threaded();
 
+  /**
+   * @brief Attempts to play the next song, cancels if something is already playing
+  */
   void attemptPlayNext();
 
   /**
@@ -217,7 +248,6 @@ public:
   */
 
   [[nodiscard]] MusicStorage &getQueue();
-  [[nodiscard]] const room::Client *searchClient(int);
   [[nodiscard]] int getIp() const;
   [[nodiscard]] const std::string &getName() const;
   [[nodiscard]] const std::list<room::Client> &getClients() const;

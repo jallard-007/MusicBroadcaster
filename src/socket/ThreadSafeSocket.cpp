@@ -70,7 +70,7 @@ bool ThreadSafeSocket::write(const std::byte *data, const size_t dataSize) {
   return true;
 }
 
-bool ThreadSafeSocket::writeHeaderAndData(const std::byte header[6], const std::byte *data, size_t dataSize) {
+bool ThreadSafeSocket::writeHeaderAndData(const std::byte header[SIZE_OF_HEADER], const std::byte *data, size_t dataSize) {
    std::unique_lock<std::mutex> lock(writeLock);
    if (send(socketFD, reinterpret_cast<const char *>(header), 6, 0) == -1) {
     fprintf(stderr, "send: %s (%d)\n", strerror(errno), errno);

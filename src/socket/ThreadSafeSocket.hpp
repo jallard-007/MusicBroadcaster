@@ -102,11 +102,12 @@ public:
 
     /**
    * Write raw data to socketFD
+   * @param header an array of size SIZE_OF_HEADER that contains header information
    * @param data pointer to data
    * @param dataSize size of data
    * @returns true if successfully wrote data, false on error
   */
-  bool writeHeaderAndData(const std::byte header[6], const std::byte *data, size_t dataSize);
+  bool writeHeaderAndData(const std::byte header[SIZE_OF_HEADER], const std::byte *data, size_t dataSize);
 
   /**
    * Read raw data from socketFD, might not read all bytes
