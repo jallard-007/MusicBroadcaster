@@ -7,34 +7,20 @@
  * 
  * @copyright Copyright (c) 2023
  * 
- */
+*/
 
 #include "IP.hpp"
 
-/**
- * @brief Construct a new IP object using the uint32_t
- * 
- * @param ip The IP 
- */
 IP::IP(uint32_t ip) {
     this->ip = ip;
     formatIP();
 }
 
-/**
- * @brief Construct a new IP object using the string
- * 
- * @param ip The IP 
- */
 IP::IP(const std::string& ip) {
     this->ipStr = ip;
     CompressIP();
 }
 
-/**
- * @brief Default construction. Will set IP to 0.0.0.0
- * 
- */
 IP::IP() {
 
     this->ip = 0;
@@ -42,12 +28,6 @@ IP::IP() {
 
 }
 
-/**
- * @brief Will convert a string to a uint32_t IP address
- * 
- * @param ip The IP in string format
- * @return uint32_t The IP in uint32_t format
- */
 void IP::CompressIP() {
     
     this->ip = 0;
@@ -67,10 +47,6 @@ void IP::CompressIP() {
 
 }
 
-/**
- * @brief Internally decompresses IP into string
- * 
- */
 void IP::formatIP() {
     
     for (int index = (int)sizeof(uint32_t) - 1; index >= 0; index--) {
@@ -82,41 +58,20 @@ void IP::formatIP() {
 
 }
 
-/**
- * @brief Sets the IP address using the uint32_t format
- * 
- * @param ip The IP address in integer format
- */
 void IP::setIP(uint32_t ip) {
     this->ip = ip;
     this->formatIP();
 }
 
-/**
- * @brief Sets the IP address using the string format
- * 
- * @param ip The IP address in string format
- */
 void IP::setIP(const std::string& ip) {
     this->ipStr = ip;
     this->CompressIP();
 }
 
-/**
- * @brief Returns the IP in string format. '.' are used as delimiters
- * 
- * @return const std::string& The string format of the IP
- */
 const std::string& IP::str() const {
     return this->ipStr;
 }
 
-
-/**
- * @brief Returns the IP in uint32_t format
- * 
- * @return uint32_t The IP address
- */
 uint32_t IP::compressed() const {
     return this->ip;
 }

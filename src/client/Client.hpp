@@ -39,16 +39,20 @@
 #include "../debug.hpp"
 
 
-// client
+/**
+ * @brief namespace for the client side of the application
+*/
 namespace clnt {
 
+/**
+ * @brief Type for the data sent through Client::threadPipe
+*/
 typedef struct {
   int fileDes;
 } PipeData_t;
 
 /**
- * @brief Client class. Handles the client
- * 
+ * @brief Handles a client that joins a room::Room
  */
 class Client {
 private:
@@ -58,7 +62,6 @@ private:
 
   /**
    * @brief The name of the client
-   * 
    */
   std::string clientName;
   MusicStorage queue;

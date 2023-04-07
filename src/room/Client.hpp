@@ -10,15 +10,10 @@
 #include "../music/MusicStorage.hpp"
 #include "../socket/ThreadSafeSocket.hpp"
 
-/**
- * @brief Namespace used to differentiate room (server side) client from client side client class
- * This is the room client
- */
 namespace room { 
 
    /**
-   * @brief Server side client class. Used as an entry into the rooms list of connected clients
-   * Doesn't actually do anything, just holds information
+   * @brief Server side client class. Used as an entry into the Room's list of connected clients.
    */
   class Client {
   public:

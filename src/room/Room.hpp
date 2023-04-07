@@ -34,6 +34,9 @@
 #include "../socket/ThreadSafeSocket.hpp"
 #include "../tracker/TrackerAPI.hpp"
 
+/**
+ * @brief Namespace for the server (room) side of the application
+*/
 namespace room {
 
 typedef struct {

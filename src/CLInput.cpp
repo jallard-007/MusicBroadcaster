@@ -1,3 +1,14 @@
+/**
+ * @file Client.hpp
+ * @author Justin Nicolas Allard
+ * @brief Implementation file for general command line input
+ * @version 1.4
+ * @date 2023-04-02
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
+
 #include "CLInput.hpp"
 
 uint16_t getPort() {
