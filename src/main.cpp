@@ -67,7 +67,6 @@ enum class Command {
   EXIT,
   MAKE_ROOM,
   JOIN_ROOM,
-  JOIN_ROOM_NAME,
 };
 
 /**
@@ -81,7 +80,6 @@ const std::unordered_map<std::string, Command> commandMap = {
   {"exit", Command::EXIT},
   {"make room", Command::MAKE_ROOM},
   {"join room", Command::JOIN_ROOM},
-  {"join room by name", Command::JOIN_ROOM_NAME}
 };
 
 int main() {
@@ -132,26 +130,6 @@ int main() {
         getHost(host);
         clnt::Client client;
         if (client.initializeClient(port, host)) {
-          if (!client.handleClient()) {
-            closeWinSocket();
-            return 0;
-          }
-        }
-        break;
-      }
-
-      case Command::JOIN_ROOM_NAME: {
-        // "join room" command was entered, so now we treat this user as a client who wants to join a room
-        std::string name;
-        std::cout << "Enter the name of the room\n >> ";
-        getline(std::cin, name);
-        RoomEntry roomEntry = TrackerAPI::lookup(name);
-        if (roomEntry.getPort() == 0 && roomEntry.getName().empty() ) {
-          std::cerr << "No room found under the name '" << name << "'\n";
-          break;
-        }
-        clnt::Client client;
-        if (client.initializeClient(roomEntry.getPort(), roomEntry.getIP().str())) {
           if (!client.handleClient()) {
             closeWinSocket();
             return 0;

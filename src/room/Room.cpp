@@ -45,17 +45,6 @@ bool Room::initializeRoom() {
   const uint16_t port = getPort();
   std::string host;
   getHost(host);
-  if (host != "localhost") {
-    std::string name;
-    std::cout << "Optional: Enter a name to register under\n >> ";
-    std::getline(std::cin, name);
-    if (!name.empty()) {
-      if (!TrackerAPI::add(name, IP(host), port)) {
-        std::cerr << "Could not register with the name '" << name << "'\n";
-        return false;
-      }
-    }
-  }
 
   if (!hostSocket.bind(host, port)) {
     return false;
