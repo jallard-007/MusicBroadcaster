@@ -425,6 +425,7 @@ void Room::handleClientReqAddQueue(room::Client &client) {
   // send a message back to client to confirm that they can continue to send the song
   int position = queue.getPositionInQueue(p_entry);
   if (position == -1) {
+    // this should never happen since we just checked for nullptr before, but just incase...
     DEBUG_P(std::cout << "couldn't find the entry\n");
     sendBasicResponse(client.getSocket(), Command::RES_ADD_TO_QUEUE_NOT_OK);
     return;
@@ -463,8 +464,9 @@ bool Room::handleClientRequests(room::Client &client) {
 
     case Command::SONG_DATA: {
       if (client.p_entry == nullptr) {
-        // client does not have a spot in the queue
-        break;
+        // client tried to add a song when they did not have a spot in the queue, remove them for being naughty
+        // should not be able to reach here as long as the client side waits for a confirmation before sending audio
+        return false;
       }
       FD_CLR(client.getSocket().getSocketFD(), &master);
       std::thread clientThread = std::thread(
@@ -480,7 +482,8 @@ bool Room::handleClientRequests(room::Client &client) {
     default:
       DEBUG_P(std::cout << "bad request\n");
       sendBasicResponse(client.getSocket(), Command::BAD_VALUES);
-      break;
+      // remove the client, we are just receiving garbage from them
+      return false;
   }
   return true;
 }
@@ -498,24 +501,24 @@ void Room::handleConnectionRequests() {
 
   auto &client = addClient({"user", std::move(clientSocket)});
 
-  auto &songs = queue.getSongs();
   int position = -1;
   Music m;
-  for (const MusicStorageEntry &entry : songs) {
+  for (const MusicStorageEntry &entry : queue.getSongs()) {
     ++position;
-    if (entry.sent > 0) {
-      m.setPath(entry.path);
-      auto data = m.getMemShared();
-      if (data == nullptr) {
-        continue;
-      }
-      ++client.entriesTillSynced;
-      std::thread thread = std::thread(
-        &Room::sendSongDataToClient_threaded,
-        this, data, &entry, static_cast<uint8_t>(position), &client
-      );
-      thread.detach();
+    if (entry.sent == 0) {
+      continue;
     }
+    m.setPath(entry.path);
+    auto data = m.getMemShared();
+    if (data == nullptr) {
+      continue;
+    }
+    ++client.entriesTillSynced;
+    std::thread thread = std::thread(
+      &Room::sendSongDataToClient_threaded,
+      this, data, &entry, static_cast<uint8_t>(position), &client
+    );
+    thread.detach();
   }
 
   if (client.entriesTillSynced == 0) {
@@ -525,22 +528,23 @@ void Room::handleConnectionRequests() {
 }
 
 void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
-  PipeData_t t{0, nullptr, queueEntry};
-  auto process = [&t, this]() {
+
+  auto process = [this](PipeData_t &t) {
     Music m;
     getMP3FilePath(m);
     if (m.getPath() == "-1") {
       handleRemoveQueueEntry(t.p_entry);
       t.p_entry = nullptr;
-      return;
+      return false;
     }
     t.p_entry->path = m.getPath();
     std::cout << "Added song to queue\n";
+    return true;
   };
 
+  PipeData_t t{0, nullptr, queueEntry};
   if (t.p_entry != nullptr) {
-    process();
-    if (t.p_entry != nullptr) {
+    if (!process(t)) {
       t.p_entry->entryMutex.unlock();
       DEBUG_P(std::cout << "unlocked entry mutex\n");
     }
