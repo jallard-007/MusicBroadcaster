@@ -638,7 +638,7 @@ int Room::handleStdinCommands() {
 
     case RoomCommand::ADD_SONG: {
       handleStdinAddSong();
-      return true;
+      return 1;
     }
 
     case RoomCommand::MUTE:
