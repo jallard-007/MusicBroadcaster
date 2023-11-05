@@ -366,7 +366,7 @@ void Client::sendMusicFile_threaded(uint8_t position) {
         DEBUG_P(std::cout << "couldn't send \n");
         t.fileDes = -1;
       }
-      std::cout << " >> ";
+      std::cout << "Cancelled\n >> ";
       std::cout.flush();
       return;
     }

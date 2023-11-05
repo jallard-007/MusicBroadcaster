@@ -534,7 +534,7 @@ void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
     getMP3FilePath(m);
     if (m.getPath() == "-1") {
       handleRemoveQueueEntry(t.p_entry);
-      t.p_entry = nullptr;
+      std::cout << "Cancelled\n";
       return false;
     }
     t.p_entry->path = m.getPath();
@@ -544,9 +544,11 @@ void Room::handleStdinAddSongHelper_threaded(MusicStorageEntry *queueEntry) {
 
   PipeData_t t{0, nullptr, queueEntry};
   if (t.p_entry != nullptr) {
-    if (!process(t)) {
-      t.p_entry->entryMutex.unlock();
-      DEBUG_P(std::cout << "unlocked entry mutex\n");
+    bool res = process(t);
+    t.p_entry->entryMutex.unlock();
+    DEBUG_P(std::cout << "unlocked entry mutex\n");
+    if (!res) {
+      t.p_entry = nullptr;
     }
   }
 
