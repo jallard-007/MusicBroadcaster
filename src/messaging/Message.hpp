@@ -1,12 +1,7 @@
 /**
  * @file Message.hpp
- * @author Tyler Johnson (tjohn73@uwo.ca)
+ * @author Justin Nicolas Allard
  * @brief This file will handle the communication between the room and the client. It is the only protocol this project uses
- * @version 0.1
- * @date 2023-03-07
- * 
- * @copyright Copyright (c) 2023
- * 
  */
 #pragma once
 

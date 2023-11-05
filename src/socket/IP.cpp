@@ -1,13 +1,8 @@
 /**
  * @file IP.cpp
- * @author Tyler Johnson (tjohn73@uwo.ca)
+ * @author Justin Nicolas Allard
  * @brief This file implements the IP class
- * @version 0.1
- * @date 2023-03-30
- * 
- * @copyright Copyright (c) 2023
- * 
-*/
+ */
 
 #include "IP.hpp"
 

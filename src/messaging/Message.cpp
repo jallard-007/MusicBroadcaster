@@ -1,12 +1,7 @@
 /**
  * @file Message.cpp
- * @author Tyler Johnson (tjohn73@uwo.ca)
+ * @author Justin Nicolas Allard
  * @brief This is the implementation file for the Message class
- * @version 0.1
- * @date 2023-03-07
- * 
- * @copyright Copyright (c) 2023
- * 
  */
 
 #include "Message.hpp"

@@ -58,20 +58,9 @@ obj/BaseSocket.o: src/socket/BaseSocket.cpp src/socket/BaseSocket.hpp
 obj/ThreadSafeSocket.o: src/socket/ThreadSafeSocket.cpp src/socket/ThreadSafeSocket.hpp
 	$(GXX) $(GXXFLAGS) -c $< -o $@
 
-# The Tracker API
-obj/TrackerAPI.o: ./src/tracker/TrackerAPI.cpp ./src/tracker/TrackerAPI.hpp
-	$(GXX) $(GXXFLAGS) -c $< -o $@
-
 obj/IP.o: src/socket/IP.cpp src/socket/IP.hpp
-	$(GXX) $(GXXFLAGS) -c $< -o $@
-
-obj/RoomEntry.o: src/tracker/RoomEntry.cpp src/tracker/RoomEntry.hpp
 	$(GXX) $(GXXFLAGS) -c $< -o $@
 
 clean:
 	cd src/tracker/ && make clean
 	rm -rf $(OBJ_DIR) main
-
-# This will make the tracker
-tracker:
-	cd src/tracker && make

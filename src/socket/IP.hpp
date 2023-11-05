@@ -1,12 +1,7 @@
 /**
  * @file IP.hpp
- * @author Tyler Johnson (tjohn73@uwo.ca)
+ * @author Justin Nicolas Allard
  * @brief This file will hold the IP address and handle conversions
- * @version 0.1
- * @date 2023-03-30
- * 
- * @copyright Copyright (c) 2023
- * 
  */
 
 #pragma once

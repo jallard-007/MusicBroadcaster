@@ -1,12 +1,7 @@
 /**
  * @file Commands.hpp
- * @author Tyler Johnson (tjohn73@uwo.ca)
+ * @author Justin Nicolas Allard
  * @brief This will handle creating commands for the room or tracker
- * @version 2.0
- * @date 2023-03-07
- * 
- * @copyright Copyright (c) 2023
- * 
  */
 
 #pragma once
